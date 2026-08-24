@@ -1,0 +1,25 @@
+{"id":"b001","title":"百威避雷","text":"昨晚喝的百威太难喝了，一股水味","ocr_text":"","label":"blue","category":"own","brands":["百威"],"note":"本品负面"}
+{"id":"b002","title":"哈啤变质了？","text":"超市买的哈尔滨啤酒过期了，喝完全家拉肚子","ocr_text":"投诉","label":"blue","category":"own","brands":["哈啤","哈尔滨"],"note":"本品负面，OCR 与正文合并判断"}
+{"id":"b003","title":"科罗娜有异物","text":"科罗娜瓶子里居然有杂质，客服已投诉","ocr_text":"","label":"blue","category":"own","brands":["科罗娜"],"note":"本品负面"}
+{"id":"b004","title":"雪津假酒","text":"买到假雪津了，大家避雷","ocr_text":"","label":"blue","category":"own","brands":["雪津"],"note":"本品负面"}
+{"id":"b005","title":"百威","text":"太难喝了，跟水一样","ocr_text":"","label":"blue","category":"own","brands":["百威"],"note":"标题与正文跨列合并"}
+{"id":"b006","title":"现在啤酒还能喝吗","text":"现在的啤酒都是勾兑的吗？喝着总感觉不对味，好像加了添加剂","ocr_text":"","label":"yellow","category":"industry","brands":[],"note":"行业整体负面"}
+{"id":"b007","title":"青岛翻车","text":"青岛啤酒抽检不合格被罚款，大家注意","ocr_text":"","label":"yellow","category":"competitor","brands":["青岛"],"note":"竞品负面"}
+{"id":"b008","title":"行业观察","text":"雪花卖不动了，渠道库存压力很大","ocr_text":"","label":"yellow","category":"competitor","brands":["雪花"],"note":"竞品负面"}
+{"id":"b009","title":"乌苏被处罚","text":"乌苏因虚假宣传被市场监管处罚","ocr_text":"","label":"yellow","category":"competitor","brands":["乌苏"],"note":"竞品负面"}
+{"id":"b010","title":"喜力被投诉","text":"喜力灌装线被曝光使用回收瓶，差评不断","ocr_text":"","label":"yellow","category":"competitor","brands":["喜力"],"note":"竞品负面"}
+{"id":"b011","title":"RIO差评","text":"锐澳的果啤被吐槽难喝，踩雷了","ocr_text":"","label":"yellow","category":"competitor","brands":["RIO","锐澳"],"note":"竞品负面，别名归一"}
+{"id":"b012","title":"乐堡销量","text":"乐堡销量下滑，营收不及预期","ocr_text":"","label":"yellow","category":"competitor","brands":["乐堡"],"note":"竞品负面"}
+{"id":"b013","title":"行业内卷","text":"行业整体成本承压，啤酒企业利润被压缩","ocr_text":"","label":"yellow","category":"industry","brands":[],"note":"行业负面"}
+{"id":"b014","title":"百威也在下滑","text":"行业报告显示整体销量下滑，百威增速也在放缓，但这不是百威质量问题","ocr_text":"","label":"yellow","category":"industry","brands":["百威"],"note":"行业负面提及本品仍为黄"}
+{"id":"b015","title":"理性讨论","text":"茅台比啤酒贵多了，勾兑话题纯属过度解读","ocr_text":"","label":"none","category":"none","brands":[],"note":"个人体验分享不标"}
+{"id":"b016","title":"别被骗了","text":"直播间教你识别勾兑啤酒，新国标下这样选才不踩坑","ocr_text":"","label":"none","category":"none","brands":[],"note":"教学/辟谣内容不标"}
+{"id":"b017","title":"广告","text":"朋友们，别再喝勾兑工业酒了，快来看看我们原产地酿造的精酿活啤酒吧","ocr_text":"","label":"none","category":"none","brands":[],"note":"对比宣传不标"}
+{"id":"b018","title":"侵权新闻","text":"滁州扬子红酒业使用带有百威英博浮雕商标的玻璃瓶灌装自有啤酒，属第三方仿冒","ocr_text":"","label":"none","category":"none","brands":["百威"],"note":"第三方仿冒不是百威负面"}
+{"id":"b019","title":"回忆","text":"我们希望回到过去，那时候到处是工业啤酒，选择很少","ocr_text":"","label":"none","category":"none","brands":[],"note":"回忆过去不标"}
+{"id":"b020","title":"晒单","text":"周末和朋友喝了精酿IPA，味道不错","ocr_text":"","label":"none","category":"none","brands":[],"note":"普通正面内容"}
+{"id":"b021","title":"活动","text":"青岛啤酒节开幕，现场人山人海","ocr_text":"","label":"none","category":"none","brands":["青岛"],"note":"活动内容不标"}
+{"id":"b022","title":"提问","text":"现在的啤酒都是勾兑的吗？有没有懂行的说说","ocr_text":"","label":"none","category":"none","brands":[],"note":"疑问未定论不标"}
+{"id":"b023","title":"新品发布","text":"百威发布全新无醇系列，主打低卡健康","ocr_text":"","label":"none","category":"none","brands":["百威"],"note":"正面新品不标"}
+{"id":"b024","title":"行业报告","text":"上半年啤酒行业产量微增，高端化趋势延续","ocr_text":"","label":"none","category":"industry","brands":[],"note":"中性行业报告不标"}
+{"id":"b025","title":"联名","text":"雪花和动漫IP联名款上线，粉丝抢购","ocr_text":"","label":"none","category":"none","brands":["雪花"],"note":"正面联名不标"}

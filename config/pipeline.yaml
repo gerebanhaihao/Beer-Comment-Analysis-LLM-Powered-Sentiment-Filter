@@ -1,0 +1,63 @@
+time:
+  morning_start: "17:30"
+  morning_end: "10:00"
+  afternoon_start: "10:00"
+  afternoon_end: "17:30"
+  monday_morning_offset_days: 3
+
+colors:
+  blue: "FF00B0F0"
+  yellow: "FFFFFF00"
+
+excel:
+  font: "宋体"
+  font_size: 11
+  row_height: 14
+  column_width: 8.42
+
+stage1:
+  candidate_min_score: 1
+  strong_negative_phrases:
+    - 太难喝
+    - 难喝
+    - 不好喝
+    - 不对味
+    - 变质
+    - 过期
+    - 假酒
+    - 假货
+    - 投诉
+    - 维权
+    - 差评
+    - 踩雷
+    - 避雷
+    - 被坑
+    - 抽检不合格
+    - 不合格
+    - 罚款
+    - 处罚
+    - 召回
+    - 中毒
+    - 呕吐
+    - 腹泻
+    - 污水
+    - 马尿
+    - 杂质
+    - 异物
+    - 虚假宣传
+    - 劣质
+    - 卖不动
+    - 卖不出去
+    - 销量下滑
+    - 营收下滑
+    - 份额下滑
+    - 库存压力
+    - 成本承压
+    - 科技与狠活
+    - 工业水啤
+
+stage2:
+  low_confidence_threshold: 0.6
+  max_retries: 2
+  fallback_to_stage1: false
+  temperature: 0
