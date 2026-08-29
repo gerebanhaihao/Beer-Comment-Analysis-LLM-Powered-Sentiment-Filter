@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,21 @@ import yaml
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def load_env_file(path: str | Path | None = None) -> None:
+    """读取项目根目录 .env（若存在）并注入环境变量，不覆盖已有值。"""
+    env_path = Path(path) if path else PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 @dataclass
@@ -28,6 +44,7 @@ class AppConfig:
     time: dict[str, Any]
     stage1: dict[str, Any]
     stage2: dict[str, Any]
+    rag: dict[str, Any]
     models: dict[str, dict[str, Any]]
     default_model: str
     config_dir: Path
@@ -72,6 +89,8 @@ def load_config(config_dir: str | Path | None = None) -> AppConfig:
     keywords = _read_yaml(base / "keywords.yaml")
     pipeline = _read_yaml(base / "pipeline.yaml")
     models = _read_yaml(base / "models.yaml")
+    rag_path = base / "rag.yaml"
+    rag = _read_yaml(rag_path) if rag_path.exists() else {}
     return AppConfig(
         own_brands=brands["own_brands"],
         competitor_brands=brands["competitor_brands"],
@@ -83,6 +102,7 @@ def load_config(config_dir: str | Path | None = None) -> AppConfig:
         time=pipeline["time"],
         stage1=pipeline.get("stage1", {}),
         stage2=pipeline.get("stage2", {}),
+        rag=rag,
         models=models["models"],
         default_model=models.get("default", "mock"),
         config_dir=base,

@@ -37,15 +37,16 @@ class Stage1Pipeline:
         data_col: str,
         text_cols: list[str],
         source_file: str,
-        start: dt.datetime,
-        end: dt.datetime,
+        start: dt.datetime | None,
+        end: dt.datetime | None,
     ) -> SourcePreparation:
         output_class = infer_file_output_class(rows, data_col, source_file)
         prepared_rows: list[PreparedRow] = []
         for original_row_number, row in enumerate(rows, start=2):
-            parsed = parse_time(row.get(time_col, ""))
-            if parsed is None or not (start <= parsed <= end):
-                continue
+            if start is not None and end is not None:
+                parsed = parse_time(row.get(time_col, ""))
+                if parsed is None or not (start <= parsed <= end):
+                    continue
             texts = [clean_text(row.get(header, "")) for header in text_cols]
             combined = "\n".join(text for text in texts if text)
             stage1 = self.classifier.classify(combined)

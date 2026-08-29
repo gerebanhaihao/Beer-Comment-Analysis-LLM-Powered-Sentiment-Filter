@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 from beer_sentiment.config import AppConfig
 from beer_sentiment.llm.base import Judge
 from beer_sentiment.models import JudgeResult, JudgedRow, Label, PreparedRow
@@ -18,8 +20,22 @@ class Stage2Pipeline:
     ) -> tuple[list[JudgedRow], list[JudgedRow]]:
         threshold = float(self.config.stage2.get("low_confidence_threshold", 0.6))
         use_fallback = bool(self.config.stage2.get("fallback_to_stage1", False))
+        max_workers = int(self.config.stage2.get("max_workers", 1))
         judged: list[JudgedRow] = []
         low_confidence: list[JudgedRow] = []
+
+        def _judge_one(prepared: PreparedRow) -> JudgeResult:
+            return judge.judge(prepared.combined_text)
+
+        candidates = [row for row in prepared_rows if row.stage1.is_candidate]
+        if len(candidates) > 1 and max_workers > 1:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                candidate_results = list(executor.map(_judge_one, candidates))
+        else:
+            candidate_results = [_judge_one(row) for row in candidates]
+        result_by_id = {
+            id(prepared): result for prepared, result in zip(candidates, candidate_results)
+        }
 
         for prepared in prepared_rows:
             if not prepared.stage1.is_candidate:
@@ -32,7 +48,7 @@ class Stage2Pipeline:
                 judged.append(JudgedRow(prepared=prepared, result=result))
                 continue
 
-            result = judge.judge(prepared.combined_text)
+            result = result_by_id[id(prepared)]
             is_low = result.confidence < threshold
             if is_low and use_fallback and prepared.stage1.hint_label is not None:
                 result = JudgeResult(

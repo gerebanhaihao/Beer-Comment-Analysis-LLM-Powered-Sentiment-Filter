@@ -1,0 +1,133 @@
+# 啤酒负面舆情判定知识库
+# type: rule = 判定规则；example = Few-shot 示例（label 为金标）
+entries:
+  # ---------- 判定规则 ----------
+  - id: rule-merge-columns
+    type: rule
+    text: "判定时必须把标题、正文、封面OCR、内容OCR合并阅读，负面信号常常只出现在OCR列，不能只看单列。"
+
+  - id: rule-keyword-hint-only
+    type: rule
+    text: "关键词（勾兑、杂质、难喝、投诉、卖不动、销量、营收、份额、虚假宣传等）只用于提醒，不能直接定论，必须结合语义判断。"
+
+  - id: rule-teaching-not-negative
+    type: rule
+    text: "教学辟谣类内容（教你识破、新国标科普、别被骗）即使命中负面关键词也不标。"
+
+  - id: rule-merchant-contrast
+    type: rule
+    text: "精酿商家以自家产品对比工业啤酒的宣传（我们/我家/原产地酿造等）是营销话术，不标。"
+
+  - id: rule-counterfeit-third-party
+    type: rule
+    text: "第三方仿冒、侵权、打假的新闻矛头指向仿冒者而非品牌本身，不标本品负面。"
+
+  - id: rule-nostalgia
+    type: rule
+    text: "回忆过去（小时候的味道、回到过去）的怀旧内容不标。"
+
+  - id: rule-blue-vs-yellow
+    type: rule
+    text: "文本明确表达本品（百威/哈尔滨/科罗娜/雪津）不好标 blue；竞品（青岛/雪花/乌苏/喜力/RIO/锐澳/乐堡）或行业整体不好标 yellow；其余标 none。"
+
+  - id: rule-question-not-assertion
+    type: rule
+    text: "疑问句、讨论帖没有明确负面论断时不标，只有明确表达当前行业或品牌不好才标。"
+
+  - id: rule-current-vs-history
+    type: rule
+    text: "只有描述当前状态的负面才算舆情；历史事件、已经解决的旧闻、财报常规波动需结合上下文判断。"
+
+  # ---------- 本品负面示例（blue） ----------
+  - id: ex-own-quality
+    type: example
+    label: blue
+    text: "百威啤酒喝出杂质还拉肚子，客服投诉三天没人理，再也不买了。"
+    reason: "明确表达本品百威质量差且投诉无门，当前负面"
+    tags: [own, quality]
+
+  - id: ex-own-taste
+    type: example
+    label: blue
+    text: "科罗娜现在味道不对味，感觉不像以前进口的那批，是不是换灌装线了？"
+    reason: "指向本品口感变差，虽然带问号但表达明确不满"
+    tags: [own, taste]
+
+  - id: ex-own-fake
+    type: example
+    label: blue
+    text: "买到一箱假哈尔滨啤酒，包装一模一样，喝了头晕，已向市监局举报。"
+    reason: "指向本品假货流通伤害消费者，属本品负面舆情"
+    tags: [own, counterfeit]
+
+  # ---------- 竞品/行业负面示例（yellow） ----------
+  - id: ex-competitor-quality
+    type: example
+    label: yellow
+    text: "乌苏啤酒后劲大还上头，昨晚喝了两瓶吐了一晚上，所谓夺命大乌苏名不虚传。"
+    reason: "明确表达竞品乌苏负面体验"
+    tags: [competitor, quality]
+
+  - id: ex-competitor-sales
+    type: example
+    label: yellow
+    text: "青岛啤酒三季度营收下滑，高端化卖不动，渠道库存压力大。"
+    reason: "竞品经营负面"
+    tags: [competitor, sales]
+
+  - id: ex-industry-negative
+    type: example
+    label: yellow
+    text: "现在啤酒行业整体不行了，工业水啤卖不动，年轻人都不喝啤酒了，各家销量全线下滑。"
+    reason: "行业整体负面"
+    tags: [industry, sales]
+
+  - id: ex-industry-safety
+    type: example
+    label: yellow
+    text: "又有啤酒厂被检出重金属超标上黑榜，食品安全问题频发，行业太乱了。"
+    reason: "行业食品安全负面"
+    tags: [industry, safety]
+
+  # ---------- 不标示例（none） ----------
+  - id: ex-none-teaching
+    type: example
+    label: none
+    text: "教你三招识破勾兑啤酒，看完别再买错，新国标科普。"
+    reason: "教学辟谣内容，命中关键词但不标"
+    tags: [none, teaching]
+
+  - id: ex-none-merchant
+    type: example
+    label: none
+    text: "我们原产地酿造的精酿活啤酒，拒绝工业勾兑，喝过就知道什么叫真啤酒。"
+    reason: "商家对比宣传，不标"
+    tags: [none, merchant]
+
+  - id: ex-none-counterfeit-news
+    type: example
+    label: none
+    text: "某仿冒百威浮雕商标的假酒窝点被查，制假者已被刑拘，网友直呼大快人心。"
+    reason: "矛头指向仿冒者而非品牌，不标本品负面"
+    tags: [none, counterfeit]
+
+  - id: ex-none-nostalgia
+    type: example
+    label: none
+    text: "还是怀念小时候绿瓶啤酒的味道，那时候的工业啤酒都觉得香。"
+    reason: "怀旧内容，不标"
+    tags: [none, nostalgia]
+
+  - id: ex-none-question
+    type: example
+    label: none
+    text: "大家觉得雪津和百威哪个更好喝？想听听老哥们的意见。"
+    reason: "纯提问求推荐，无负面论断"
+    tags: [none, question]
+
+  - id: ex-none-personal-experience
+    type: example
+    label: none
+    text: "茅台比啤酒贵多了，我个人还是喜欢喝点啤酒配烧烤，纯属个人体验分享。"
+    reason: "个人体验分享，不构成行业或品牌负面"
+    tags: [none, experience]

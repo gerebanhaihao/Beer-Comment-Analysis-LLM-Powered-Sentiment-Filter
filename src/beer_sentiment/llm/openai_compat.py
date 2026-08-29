@@ -13,6 +13,20 @@ from beer_sentiment.llm.prompts import build_messages
 from beer_sentiment.models import JudgeResult
 
 
+def create_client(model_config: dict[str, Any]) -> Any:
+    """按模型配置创建 OpenAI 兼容客户端（供判定与重排序共用）。"""
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError("缺少 openai 依赖，请安装：pip install 'beer-sentiment[llm]'") from exc
+    key_env = model_config.get("api_key_env", "OPENAI_API_KEY")
+    api_key = os.getenv(key_env)
+    if not api_key:
+        raise RuntimeError(f"缺少环境变量 {key_env}")
+    base_url = model_config.get("base_url") or os.getenv("OPENAI_BASE_URL")
+    return OpenAI(api_key=api_key, base_url=base_url)
+
+
 class OpenAICompatJudge(Judge):
     """Judge backed by any OpenAI-compatible chat completions API."""
 
@@ -27,18 +41,12 @@ class OpenAICompatJudge(Judge):
         self.model_config = model_config
         self.config = app_config
         self.prompt_path = prompt_path
+        self._client: Any = None
 
-    def _client(self):
-        try:
-            from openai import OpenAI
-        except ImportError as exc:
-            raise RuntimeError("缺少 openai 依赖，请安装：pip install 'beer-sentiment[llm]'") from exc
-        key_env = self.model_config.get("api_key_env", "OPENAI_API_KEY")
-        api_key = os.getenv(key_env)
-        if not api_key:
-            raise RuntimeError(f"缺少环境变量 {key_env}")
-        base_url = self.model_config.get("base_url") or os.getenv("OPENAI_BASE_URL")
-        return OpenAI(api_key=api_key, base_url=base_url)
+    def _get_client(self):
+        if self._client is None:
+            self._client = create_client(self.model_config)
+        return self._client
 
     def judge(self, sample: str, context: str = "") -> JudgeResult:
         messages = build_messages(
@@ -53,7 +61,7 @@ class OpenAICompatJudge(Judge):
         for _ in range(retries + 1):
             started = time.perf_counter()
             try:
-                response = self._client().chat.completions.create(
+                response = self._get_client().chat.completions.create(
                     model=self.model_config.get("model", self.name),
                     messages=messages,
                     temperature=temperature,

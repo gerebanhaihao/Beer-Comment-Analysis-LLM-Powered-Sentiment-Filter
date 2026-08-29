@@ -1,0 +1,25 @@
+# Hybrid RAG 配置：知识库检索 -> 注入 Stage 2 判定 Prompt
+enabled: true
+
+knowledge_base: "config/knowledge_base.yaml"
+
+sparse: # BM25 稀疏召回
+  top_k: 10
+  k1: 1.5
+  b: 0.75
+
+dense: # 特征哈希稠密召回
+  top_k: 10
+  dim: 256
+
+rrf: # 倒数排名融合
+  k: 60
+
+rerank: # Cross-Encoder（LLM 打分）重排序，失败自动回退 RRF 顺序
+  enabled: true
+  top_n: 8
+  temperature: 0.0
+
+fewshot: # 最终注入 Prompt 的条数与长度上限
+  top_k: 5
+  max_context_chars: 1500

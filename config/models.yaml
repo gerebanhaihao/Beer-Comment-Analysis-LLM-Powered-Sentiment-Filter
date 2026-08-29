@@ -1,34 +1,15 @@
-default: mock
+default: deepseek
 
 models:
   mock:
     type: mock
     display_name: "Rule Mock（无 API 依赖）"
 
-  # 以下模型配置是 OpenAI 兼容接口的可替换占位示例，价格与模型名按实际账号调整。
-  deepseek-v4:
+  deepseek:
     type: openai_compatible
-    display_name: "DeepSeek-V4"
+    display_name: "DeepSeek"
     base_url: "https://api.deepseek.com/v1"
-    model: "deepseek-v4"
+    model: "deepseek-chat"
     api_key_env: "DEEPSEEK_API_KEY"
-    input_price_per_million: 0.5
-    output_price_per_million: 2.0
-
-  qwen-max:
-    type: openai_compatible
-    display_name: "Qwen-Max"
-    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    model: "qwen-max"
-    api_key_env: "DASHSCOPE_API_KEY"
-    input_price_per_million: 1.0
-    output_price_per_million: 3.0
-
-  kimi-k3:
-    type: openai_compatible
-    display_name: "Kimi-K3"
-    base_url: "https://api.moonshot.cn/v1"
-    model: "kimi-k3"
-    api_key_env: "MOONSHOT_API_KEY"
-    input_price_per_million: 1.0
-    output_price_per_million: 3.0
+    input_price_per_million: 0.27
+    output_price_per_million: 1.10

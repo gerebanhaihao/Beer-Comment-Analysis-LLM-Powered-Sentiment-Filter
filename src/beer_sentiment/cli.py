@@ -8,7 +8,7 @@ import datetime as dt
 import sys
 from pathlib import Path
 
-from beer_sentiment.config import AppConfig, load_config
+from beer_sentiment.config import AppConfig, load_config, load_env_file
 from beer_sentiment.eval.benchmark import load_benchmark
 from beer_sentiment.eval.metrics import evaluate
 from beer_sentiment.eval.report import render_compare, save_run
@@ -29,6 +29,9 @@ from beer_sentiment.llm.mock import MockJudge
 from beer_sentiment.llm.openai_compat import OpenAICompatJudge
 from beer_sentiment.models import Label
 from beer_sentiment.pipeline.run import run_directory
+from beer_sentiment.rag.hybrid import HybridRetriever
+from beer_sentiment.rag.judge import RagJudge
+from beer_sentiment.rag.knowledge import KnowledgeBase
 from beer_sentiment.rules.classify import Stage1Classifier
 from beer_sentiment.rules.normalize import clean_text
 
@@ -71,13 +74,23 @@ def normalize_output(value) -> str:
     return OUTPUT_ALIASES.get(key, "")
 
 
-def build_judge(name: str, config: AppConfig) -> Judge:
+def build_judge(name: str, config: AppConfig, use_rag: bool | None = None) -> Judge:
     model_config = config.model_config(name)
     kind = model_config.get("type", "openai_compatible")
     if kind == "mock":
         return MockJudge(config)
     if kind == "openai_compatible":
-        return OpenAICompatJudge(name, model_config, config)
+        judge = OpenAICompatJudge(name, model_config, config)
+        rag_enabled = bool(config.rag.get("enabled", False)) if use_rag is None else use_rag
+        if rag_enabled:
+            kb_path = (
+                config.config_dir.parent / config.rag.get("knowledge_base", "config/knowledge_base.yaml")
+            )
+            knowledge_base = KnowledgeBase.from_yaml(kb_path)
+            retriever = HybridRetriever(knowledge_base, config.rag, model_config)
+            max_chars = int(config.rag.get("fewshot", {}).get("max_context_chars", 1500))
+            return RagJudge(judge, retriever, max_context_chars=max_chars)
+        return judge
     raise ValueError(f"未知模型类型：{kind}")
 
 
@@ -214,7 +227,9 @@ def cmd_build(args, config: AppConfig) -> None:
 
 def cmd_run(args, config: AppConfig) -> None:
     model_name = args.model or config.default_model
-    judge = build_judge(model_name, config)
+    judge = build_judge(
+        model_name, config, use_rag=False if getattr(args, "no_rag", False) else None
+    )
     session = resolve_session(args.session)
     summaries, low_confidence = run_directory(
         args.input_dir,
@@ -224,6 +239,7 @@ def cmd_run(args, config: AppConfig) -> None:
         judge,
         config,
         args.name_contains,
+        all_time=getattr(args, "all_time", False),
     )
     print(f"模型：{judge.name}")
     for summary in summaries:
@@ -301,12 +317,22 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_cmd.add_argument("--output-dir", default="object")
 
     run_parser = sub.add_parser("run", help="端到端运行：粗筛 + 模型判定 + 着色 Excel")
-    run_parser.add_argument("--input-dir", default="original")
-    run_parser.add_argument("--output-dir", default="object")
+    run_parser.add_argument("--input-dir", default="data")
+    run_parser.add_argument("--output-dir", default="output")
     run_parser.add_argument("--session", choices=["morning", "afternoon"])
     run_parser.add_argument("--date")
     run_parser.add_argument("--model", default=None)
     run_parser.add_argument("--name-contains", action="append")
+    run_parser.add_argument(
+        "--all-time",
+        action="store_true",
+        help="跳过时间窗过滤，处理 CSV 内全部行",
+    )
+    run_parser.add_argument(
+        "--no-rag",
+        action="store_true",
+        help="关闭 Hybrid RAG 检索，只用裸模型判定",
+    )
 
     eval_parser = sub.add_parser("eval", help="在 Benchmark 上评测模型并生成报告")
     eval_parser.add_argument("--benchmark", default="benchmark/beer_sentiment_benchmark.jsonl")
@@ -321,6 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    load_env_file()
     config = load_config(args.config_dir)
     if args.command == "prepare":
         cmd_prepare(args, config)

@@ -61,3 +61,4 @@ stage2:
   max_retries: 2
   fallback_to_stage1: false
   temperature: 0
+  max_workers: 4

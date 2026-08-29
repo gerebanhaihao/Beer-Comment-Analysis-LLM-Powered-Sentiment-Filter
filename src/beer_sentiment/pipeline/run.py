@@ -28,6 +28,7 @@ def run_file(
     date: str | None,
     judge: Judge,
     config: AppConfig,
+    all_time: bool = False,
 ) -> RunSummary:
     path = Path(input_path)
     rows, _ = read_csv_rows(path, "auto")
@@ -36,18 +37,21 @@ def run_file(
     headers = list(rows[0].keys())
 
     time_col = detect_time_column(headers)
-    if not time_col:
-        raise ValueError(f"无法识别时间列：{path}")
+    if not time_col and not all_time:
+        raise ValueError(f"无法识别时间列：{path}（或使用 --all-time 跳过时间过滤）")
     data_col = detect_data_column(headers) or headers[0]
     text_cols = detect_text_columns(headers)
     if not text_cols:
         raise ValueError(f"无法识别 正文/封面OCR/内容OCR/标题 列：{path}")
 
-    today = dt.date.fromisoformat(date) if date else dt.date.today()
-    start, end = compute_window(session, today, config.time)
+    if all_time:
+        start = end = None
+    else:
+        today = dt.date.fromisoformat(date) if date else dt.date.today()
+        start, end = compute_window(session, today, config.time)
     preparation = Stage1Pipeline(config).prepare(
         rows,
-        time_col,
+        time_col or "",
         data_col,
         text_cols,
         path.name,
@@ -94,6 +98,7 @@ def run_directory(
     judge: Judge,
     config: AppConfig,
     name_contains: list[str] | None = None,
+    all_time: bool = False,
 ) -> tuple[list[RunSummary], list]:
     input_path = Path(input_dir)
     if not input_path.exists():
@@ -111,7 +116,7 @@ def run_directory(
     summaries = []
     all_low: list = []
     for path in csv_paths:
-        summary = run_file(path, output_dir, session, date, judge, config)
+        summary = run_file(path, output_dir, session, date, judge, config, all_time=all_time)
         summaries.append(summary)
         all_low.extend(summary.low_confidence_rows)
     return summaries, all_low
