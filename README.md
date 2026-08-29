@@ -100,9 +100,6 @@ export DEEPSEEK_API_KEY=...
 
 - M1: Engineering skeleton, configs, tests, CI, demo data
 - M2: LLM judgment abstraction, Benchmark, evaluation reports
-- M3: Hybrid RAG (BM25 + Dense + RRF + Cross-Encoder) ✅ + Bad Case auto-feedback
+- M3: Hybrid RAG (BM25 + Dense + RRF + Cross-Encoder) + Bad Case auto-feedback
 - M4: Streamlit demo page and automated scheduling
 
-## Note
-
-The Benchmark in this repository is a desensitized synthetic subset used to reproduce the evaluation pipeline. The full private annotated dataset and real scraped data are not committed. Prices in `config/models.yaml` are indicative; adjust according to your actual account.
