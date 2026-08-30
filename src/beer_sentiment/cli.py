@@ -301,7 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     prepare_parser = sub.add_parser("prepare", help="按时间窗生成待人工筛选 CSV")
-    prepare_parser.add_argument("--input-dir", default="original")
+    prepare_parser.add_argument("--input-dir", default="data")
     prepare_parser.add_argument("--name-contains", action="append")
     prepare_parser.add_argument("--output-dir", default=".")
     prepare_parser.add_argument("--session", choices=["morning", "afternoon"])

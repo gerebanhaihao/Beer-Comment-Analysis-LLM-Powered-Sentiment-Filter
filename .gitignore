@@ -12,7 +12,8 @@ htmlcov/
 .env
 
 # 真实舆情数据与成品文件不入库
-original/
+data/*
+!data/.gitkeep
 object/
 history/
 待筛选_*.csv

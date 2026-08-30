@@ -15,8 +15,8 @@ beer-sentiment run --all-time
 # Equivalent long form:
 beer-sentiment run --input-dir data --output-dir output --all-time --model deepseek
 
-# Run without API Key: use mock LLM
-beer-sentiment run --input-dir data/samples --output-dir output --all-time --model mock
+# Run without API Key: use mock LLM (prepare your own CSVs in data/ first)
+beer-sentiment run --input-dir data --output-dir output --all-time --model mock
 
 # Disable Hybrid RAG (plain LLM judgment only):
 beer-sentiment run --all-time --no-rag
@@ -40,7 +40,7 @@ Notes:
 Human review workflow is also supported:
 
 ```bash
-beer-sentiment prepare --input-dir original --session morning --date 2026-08-24
+beer-sentiment prepare --input-dir data --session morning --date 2026-08-24
 beer-sentiment build --review-csv 待筛选_上午.csv --session morning
 ```
 
@@ -51,7 +51,7 @@ beer-comment-analysis/
 ├── benchmark/                 # Human-annotated Benchmark (desensitized subset)
 ├── config/                    # Brand lexicon, keywords, pipeline, model & RAG configs
 ├── prompts/                   # Versioned judgment prompts
-├── data/samples/              # Public demo data
+├── data/                      # Raw Quark CSV data（本地保留、不入库，见 .gitignore）
 ├── src/beer_sentiment/
 │   ├── rules/                 # Stage 1: OCR normalization, brand matching, candidate filtering
 │   ├── llm/                   # Stage 2: Mock / OpenAI-compatible models, structured output
@@ -103,3 +103,6 @@ export DEEPSEEK_API_KEY=...
 - M3: Hybrid RAG (BM25 + Dense + RRF + Cross-Encoder) + Bad Case auto-feedback
 - M4: Streamlit demo page and automated scheduling
 
+## Note
+
+The Benchmark in this repository is a desensitized synthetic subset used to reproduce the evaluation pipeline. The full private annotated dataset and real scraped data are not committed. Prices in `config/models.yaml` are indicative; adjust according to your actual account.
