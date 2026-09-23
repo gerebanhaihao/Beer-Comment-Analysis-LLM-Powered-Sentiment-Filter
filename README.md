@@ -9,10 +9,10 @@ The project is designed for real-world business scenarios: raw CSV data comes fr
 ```bash
 pip install -e ".[llm,dev]"
 
-# Drop raw Quark CSV files into data/, then run end to end (requires DeepSeek API key in .env):
+# Drop raw Quark CSV files into data/, then run end to end (the default is an offline simulation):
 beer-sentiment run --all-time
 
-# Equivalent long form:
+# Use a real OpenAI-compatible DeepSeek endpoint after configuring its API key:
 beer-sentiment run --input-dir data --output-dir output --all-time --model deepseek
 
 # Run without API Key: use mock LLM (prepare your own CSVs in data/ first)
@@ -21,11 +21,14 @@ beer-sentiment run --input-dir data --output-dir output --all-time --model mock
 # Disable Hybrid RAG (plain LLM judgment only):
 beer-sentiment run --all-time --no-rag
 
-# Evaluate on Benchmark and generate report
-beer-sentiment eval --model mock
+# Compare the three offline model simulations on the converted Benchmark
+beer-sentiment eval --models deepseek-v4,qwen-max,kimi-k3
+
+# Convert manually colored Benchmark Excel files to JSONL
+python scripts/convert_benchmark_excel.py
 ```
 
-`.env` at the project root (already git-ignored):
+`.env` at the project root (already git-ignored, only needed for real API calls):
 
 ```text
 DEEPSEEK_API_KEY=sk-...
@@ -36,6 +39,8 @@ Notes:
 - `run` defaults to `--input-dir data --output-dir output`; colored Excel files are written next to the source file name (own-brand negatives in blue, competitor/industry negatives in yellow).
 - With `--all-time` every CSV row is processed; without it, rows are filtered to the morning/afternoon time window defined in `config/pipeline.yaml`.
 - Low-confidence rows (below `stage2.low_confidence_threshold`) are printed for human review at the end of the run.
+- `mock` is not a real model. It is an offline rule-based baseline used for tests and smoke runs.
+- `deepseek-v4`, `qwen-max`, and `kimi-k3` are deterministic local simulations until their real APIs are configured. Their metrics must not be presented as real model performance.
 
 Human review workflow is also supported:
 
@@ -75,6 +80,8 @@ beer-comment-analysis/
 
 `eval` outputs accuracy, macro-average F1, negative detection precision/recall/F1, false positive rate, false negative rate, confusion matrix, average latency, and cost. Each experiment is archived under `artifacts/runs/` with model name, prompt version, config hash, metrics, and Bad Cases. Multi-model evaluation generates an additional comparison table at `artifacts/reports/model_compare.md`.
 
+The converted Benchmark uses sequential IDs (`b000001`, `b000002`, ...), category, data scope, title, body, cover OCR, and content OCR. Source filenames and Excel row numbers are not written to JSON. The source `情感` column is not used as the gold label; row fill color is the gold label.
+
 ## Hybrid RAG
 
 `src/beer_sentiment/rag/` implements the knowledge retrieval layer for Stage 2:
@@ -105,4 +112,4 @@ export DEEPSEEK_API_KEY=...
 
 ## Note
 
-The Benchmark in this repository is a desensitized synthetic subset used to reproduce the evaluation pipeline. The full private annotated dataset and real scraped data are not committed. Prices in `config/models.yaml` are indicative; adjust according to your actual account.
+The Benchmark JSONL in this repository is generated from the manually colored Excel examples under `benchmark/`; blank rows without text are skipped. The original Excel workbooks are local inputs and remain ignored by Git. Simulated model prices and latencies are placeholders; replace them with measured values after connecting real APIs.

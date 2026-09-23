@@ -1,9 +1,49 @@
-default: deepseek
+default: deepseek-v4
 
 models:
   mock:
     type: mock
-    display_name: "Rule Mock（无 API 依赖）"
+    display_name: "Rule Mock（离线规则基线，非真实模型）"
+
+  # These three entries are deterministic local simulations. They exercise
+  # the same multi-model evaluation/reporting path without API credentials.
+  # Replace type=simulated with openai_compatible and add provider settings
+  # when the real APIs are available.
+  deepseek-v4:
+    type: simulated
+    display_name: "DeepSeek-V4（模拟）"
+    simulation:
+      ambiguity_policy: conservative
+      ambiguity_threshold: 0.6
+      noise_rate: 0.01
+      confidence_scale: 0.98
+      latency_ms: 420
+      cost_usd_per_sample: 0.0008
+      seed: deepseek-v4
+
+  qwen-max:
+    type: simulated
+    display_name: "Qwen-Max（模拟）"
+    simulation:
+      ambiguity_policy: balanced
+      ambiguity_threshold: 0.6
+      noise_rate: 0.04
+      confidence_scale: 0.95
+      latency_ms: 360
+      cost_usd_per_sample: 0.0006
+      seed: qwen-max
+
+  kimi-k3:
+    type: simulated
+    display_name: "Kimi-K3（模拟）"
+    simulation:
+      ambiguity_policy: aggressive
+      ambiguity_threshold: 0.6
+      noise_rate: 0.08
+      confidence_scale: 0.92
+      latency_ms: 280
+      cost_usd_per_sample: 0.0004
+      seed: kimi-k3
 
   deepseek:
     type: openai_compatible

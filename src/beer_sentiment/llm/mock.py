@@ -10,7 +10,13 @@ from beer_sentiment.rules.normalize import normalize_ocr_noise
 
 
 class MockJudge(Judge):
-    """Rule-based stand-in used for tests, CI, and demos without an API key."""
+    """Offline rule baseline, not a real LLM.
+
+    ``MockJudge`` applies the current Stage 1 rules and a small set of explicit
+    exclusions. It is useful for tests and smoke runs, but its accuracy must
+    not be presented as the performance of DeepSeek, Qwen, Kimi, or any other
+    real model.
+    """
 
     name = "mock"
 
@@ -28,6 +34,7 @@ class MockJudge(Judge):
             reason=reason,
             brands=stage1.brands,
             model=self.name,
+            simulated=True,
         )
 
     def _has_strong_phrase(self, text: str) -> bool:

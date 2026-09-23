@@ -27,6 +27,7 @@ from beer_sentiment.io.filenames import output_filename, review_filename
 from beer_sentiment.llm.base import Judge
 from beer_sentiment.llm.mock import MockJudge
 from beer_sentiment.llm.openai_compat import OpenAICompatJudge
+from beer_sentiment.llm.simulated import SimulatedJudge
 from beer_sentiment.models import Label
 from beer_sentiment.pipeline.run import run_directory
 from beer_sentiment.rag.hybrid import HybridRetriever
@@ -79,6 +80,8 @@ def build_judge(name: str, config: AppConfig, use_rag: bool | None = None) -> Ju
     kind = model_config.get("type", "openai_compatible")
     if kind == "mock":
         return MockJudge(config)
+    if kind == "simulated":
+        return SimulatedJudge(name, model_config, config)
     if kind == "openai_compatible":
         judge = OpenAICompatJudge(name, model_config, config)
         rag_enabled = bool(config.rag.get("enabled", False)) if use_rag is None else use_rag
@@ -272,7 +275,7 @@ def cmd_eval(args, config: AppConfig) -> None:
         paths = save_run(args.artifacts_dir, name, metrics, args.benchmark, config.digest())
         entries.append((name, metrics))
         print(
-            f"模型 {name}：样本 {metrics.total}，准确率 {metrics.accuracy:.4f}，"
+            f"模型 {name}（{metrics.mode}）：样本 {metrics.total}，准确率 {metrics.accuracy:.4f}，"
             f"宏F1 {metrics.macro_f1:.4f}，负面召回 {metrics.negative_recall:.4f}，"
             f"负面精确率 {metrics.negative_precision:.4f}，误报率 {metrics.false_positive_rate:.4f}"
         )
@@ -338,8 +341,10 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--benchmark", default="benchmark/beer_sentiment_benchmark.jsonl")
     eval_parser.add_argument(
         "--models",
+        "--model",
+        dest="models",
         default=None,
-        help="逗号分隔的模型名，例如 mock,deepseek-v4",
+        help="逗号分隔的模型名，例如 deepseek-v4,qwen-max,kimi-k3",
     )
     eval_parser.add_argument("--artifacts-dir", default="artifacts")
     return parser

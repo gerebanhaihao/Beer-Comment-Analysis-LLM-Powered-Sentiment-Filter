@@ -21,9 +21,16 @@ class BenchmarkSample:
     category: Category
     brands: list[str]
     note: str
+    combined_text_override: str = ""
+    source_file: str = ""
+    source_sheet: str = ""
+    source_row: int = 0
+    data_scope: str = ""
 
     @property
     def combined_text(self) -> str:
+        if self.combined_text_override:
+            return self.combined_text_override
         parts = [self.title, self.text, self.ocr_text]
         return "\n".join(part for part in parts if part)
 
@@ -47,6 +54,11 @@ def load_benchmark(path: str | Path) -> list[BenchmarkSample]:
                         category=Category(data.get("category") or "none"),
                         brands=list(data.get("brands") or []),
                         note=str(data.get("note") or ""),
+                        combined_text_override=str(data.get("combined_text") or ""),
+                        source_file=str(data.get("source_file") or ""),
+                        source_sheet=str(data.get("source_sheet") or ""),
+                        source_row=int(data.get("source_row") or 0),
+                        data_scope=str(data.get("data_scope") or ""),
                     )
                 )
             except (json.JSONDecodeError, ValueError) as exc:

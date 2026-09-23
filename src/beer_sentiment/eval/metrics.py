@@ -36,6 +36,7 @@ class EvalMetrics:
     avg_latency_ms: float
     total_cost_usd: float
     errors: list[dict[str, Any]]
+    mode: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -59,6 +60,7 @@ class EvalMetrics:
             "confusion": self.confusion,
             "avg_latency_ms": round(self.avg_latency_ms, 2),
             "total_cost_usd": round(self.total_cost_usd, 6),
+            "mode": self.mode,
             "error_count": len(self.errors),
             "errors": self.errors,
         }
@@ -133,6 +135,7 @@ def compute_metrics(
         avg_latency_ms=avg_latency,
         total_cost_usd=sum(cost_usd),
         errors=[],
+        mode=("simulated" if results and all(result.simulated for result in results) else "live"),
     )
 
 
@@ -157,6 +160,9 @@ def evaluate(
                     "confidence": round(result.confidence, 4),
                     "text": sample.combined_text,
                     "note": sample.note,
+                    "source_file": sample.source_file,
+                    "source_sheet": sample.source_sheet,
+                    "source_row": sample.source_row,
                 }
             )
     metrics = compute_metrics(gold_labels, pred_labels, results)

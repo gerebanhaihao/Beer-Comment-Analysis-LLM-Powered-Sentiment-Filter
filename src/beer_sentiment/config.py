@@ -68,6 +68,8 @@ class AppConfig:
             "association_keywords": self.association_keywords,
             "stage1": self.stage1,
             "stage2": self.stage2,
+            "rag": self.rag,
+            "models": self.models,
         }
         raw = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()[:12]

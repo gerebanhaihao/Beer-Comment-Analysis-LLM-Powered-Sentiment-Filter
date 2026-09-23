@@ -32,6 +32,7 @@ def render_markdown(
         "",
         f"- 数据集：`{benchmark_path}`",
         f"- 样本数：{metrics.total}",
+        f"- 评测模式：{metrics.mode}",
         "",
         "## 指标",
         "",
@@ -56,9 +57,15 @@ def render_markdown(
     ]
     if metrics.errors:
         for error in metrics.errors:
+            source = ""
+            if error.get("source_file"):
+                source = (
+                    f"，来源 `{error['source_file']}`/{error.get('source_sheet', '')}"
+                    f" 第 {error.get('source_row', 0)} 行"
+                )
             lines.append(
                 f"- `{error['id']}`：gold=`{error['gold']}`，pred=`{error['pred']}`，"
-                f"置信度 `{error['confidence']}`，备注：{error['note']}"
+                f"置信度 `{error['confidence']}`，备注：{error['note']}{source}"
             )
     else:
         lines.append("无")
@@ -100,12 +107,12 @@ def render_compare(entries: list[tuple[str, EvalMetrics]]) -> str:
     lines = [
         "# 模型对比",
         "",
-        "| 模型 | 准确率 | 宏F1 | 负面召回 | 负面精确 | 误报率 | 平均延迟ms | 成本USD |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 模型 | 模式 | 准确率 | 宏F1 | 负面召回 | 负面精确 | 误报率 | 平均延迟ms | 成本USD |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for name, metrics in entries:
         lines.append(
-            f"| {name} | {metrics.accuracy:.4f} | {metrics.macro_f1:.4f} | "
+            f"| {name} | {metrics.mode} | {metrics.accuracy:.4f} | {metrics.macro_f1:.4f} | "
             f"{metrics.negative_recall:.4f} | {metrics.negative_precision:.4f} | "
             f"{metrics.false_positive_rate:.4f} | {metrics.avg_latency_ms:.2f} | "
             f"{metrics.total_cost_usd:.6f} |"

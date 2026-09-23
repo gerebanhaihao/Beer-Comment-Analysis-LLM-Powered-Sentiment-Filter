@@ -51,6 +51,7 @@ class JudgeResult:
     latency_ms: float = 0.0
     cost_usd: float = 0.0
     raw: str = ""
+    simulated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -61,6 +62,7 @@ class JudgeResult:
             "model": self.model,
             "latency_ms": round(self.latency_ms, 2),
             "cost_usd": round(self.cost_usd, 6),
+            "simulated": self.simulated,
         }
 
 

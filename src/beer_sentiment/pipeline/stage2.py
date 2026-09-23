@@ -59,6 +59,7 @@ class Stage2Pipeline:
                     model=result.model,
                     latency_ms=result.latency_ms,
                     cost_usd=result.cost_usd,
+                    simulated=result.simulated,
                 )
                 is_low = False
 
