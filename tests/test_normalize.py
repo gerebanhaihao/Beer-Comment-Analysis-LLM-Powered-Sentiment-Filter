@@ -17,3 +17,12 @@ def test_extract_brands_with_alias(config):
     assert extract_brands("百威英博啤酒", config) == ["百威"]
     assert extract_brands("锐澳果啤", config)[0] == "RIO"
     assert extract_brands("雪花啤酒挺好喝", config) == ["雪花"]
+
+
+def test_extract_brands_with_fuzzy_and_pinyin(config):
+    assert "百威" in extract_brands("百微太难喝了", config)
+    assert "百威" in extract_brands("baiwei beer", config)
+
+
+def test_product_alias_matches_brand(config):
+    assert "雪花" in extract_brands("勇闯天涯卖不动", config)

@@ -37,6 +37,7 @@ class AppConfig:
     own_brands: list[str]
     competitor_brands: list[str]
     brand_aliases: dict[str, list[str]]
+    matching: dict[str, Any]
     negative_keywords: list[str]
     association_keywords: list[str]
     colors: dict[str, str]
@@ -64,6 +65,7 @@ class AppConfig:
             "own_brands": self.own_brands,
             "competitor_brands": self.competitor_brands,
             "brand_aliases": self.brand_aliases,
+            "matching": self.matching,
             "negative_keywords": self.negative_keywords,
             "association_keywords": self.association_keywords,
             "stage1": self.stage1,
@@ -97,6 +99,7 @@ def load_config(config_dir: str | Path | None = None) -> AppConfig:
         own_brands=brands["own_brands"],
         competitor_brands=brands["competitor_brands"],
         brand_aliases=brands.get("aliases", {}),
+        matching=brands.get("matching", {}),
         negative_keywords=keywords["negative_keywords"],
         association_keywords=keywords["association_keywords"],
         colors=pipeline["colors"],

@@ -209,6 +209,7 @@ def convert(input_dir: Path, output_path: Path) -> int:
                     }
                 )
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
         for record in records:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -230,7 +231,11 @@ def convert(input_dir: Path, output_path: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="转换人工标注 Excel Benchmark 为 JSONL")
     parser.add_argument("--input-dir", default="benchmark")
-    parser.add_argument("--output", default="benchmark/beer_sentiment_benchmark.jsonl")
+    parser.add_argument(
+        "--output",
+        default="data/beer_sentiment_benchmark_real.jsonl",
+        help="输出 JSONL（默认写入被 Git 忽略的本地 data/ 目录）",
+    )
     parser.add_argument("--inspect", action="store_true", help="只检查工作簿结构，不生成 JSONL")
     args = parser.parse_args()
     input_dir = Path(args.input_dir)

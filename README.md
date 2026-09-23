@@ -24,8 +24,20 @@ beer-sentiment run --all-time --no-rag
 # Compare the three offline model simulations on the converted Benchmark
 beer-sentiment eval --models deepseek-v4,qwen-max,kimi-k3
 
-# Convert manually colored Benchmark Excel files to JSONL
+# Convert manually colored Benchmark Excel files to a local, Git-ignored JSONL
 python scripts/convert_benchmark_excel.py
+
+# Evaluate the private real Benchmark explicitly (the default remains synthetic)
+beer-sentiment eval --benchmark data/beer_sentiment_benchmark_real.jsonl --models deepseek-v4,qwen-max,kimi-k3
+
+# Run the local real-Benchmark smoke test; it skips automatically when the file is absent
+pytest tests/test_real_benchmark_local.py
+
+# Optional: validate and import daily Quark CSV exports from a local inbox
+beer-sentiment ingest --input-dir incoming --data-dir data
+
+# Use --move to physically move successfully imported files into data/
+beer-sentiment ingest --input-dir incoming --data-dir data --move
 ```
 
 `.env` at the project root (already git-ignored, only needed for real API calls):
@@ -56,9 +68,10 @@ beer-comment-analysis/
 ├── benchmark/                 # Human-annotated Benchmark (desensitized subset)
 ├── config/                    # Brand lexicon, keywords, pipeline, model & RAG configs
 ├── prompts/                   # Versioned judgment prompts
-├── data/                      # Raw Quark CSV data（本地保留、不入库，见 .gitignore）
+├── incoming/                  # Optional local drop folder for downloaded Quark CSVs
+├── data/                      # Validated raw Quark CSV data（本地保留、不入库，见 .gitignore）
 ├── src/beer_sentiment/
-│   ├── rules/                 # Stage 1: OCR normalization, brand matching, candidate filtering
+│   ├── rules/                 # Stage 1: OCR normalization, fuzzy brand-alias matching, candidate filtering
 │   ├── llm/                   # Stage 2: Mock / OpenAI-compatible models, structured output
 │   ├── rag/                   # Hybrid RAG: BM25 + Dense vectors, RRF, Cross-Encoder rerank
 │   ├── pipeline/              # Two-stage pipeline and end-to-end execution
@@ -76,11 +89,23 @@ beer-comment-analysis/
 - Keywords are signals only — do not label educational content, promotional comparisons, personal experiences, third-party counterfeiting, or nostalgic memories just because keywords appear.
 - Low-confidence samples are not auto-labeled and enter the human review queue.
 
+## Local File Ingestion and Brand Matching
+
+The project does not connect to Quark. The optional `ingest` command validates
+CSV files placed in a local `incoming/` folder, skips content duplicates, and
+copies them into `data/`; add `--move` when the original download should be
+removed from the inbox after successful import. Files can also be placed
+directly in `data/`, which remains the runtime input directory.
+
+Brand matching supports exact aliases, English aliases, pinyin aliases, and
+one-edit-distance fuzzy matching. Product names such as `勇闯天涯` are kept as
+ordinary aliases of their parent brand in `config/brands.yaml`.
+
 ## Evaluation Metrics
 
 `eval` outputs accuracy, macro-average F1, negative detection precision/recall/F1, false positive rate, false negative rate, confusion matrix, average latency, and cost. Each experiment is archived under `artifacts/runs/` with model name, prompt version, config hash, metrics, and Bad Cases. Multi-model evaluation generates an additional comparison table at `artifacts/reports/model_compare.md`.
 
-The converted Benchmark uses sequential IDs (`b000001`, `b000002`, ...), category, data scope, title, body, cover OCR, and content OCR. Source filenames and Excel row numbers are not written to JSON. The source `情感` column is not used as the gold label; row fill color is the gold label.
+The private converted Benchmark uses sequential IDs (`b000001`, `b000002`, ...), category, data scope, title, body, cover OCR, and content OCR. Source filenames and Excel row numbers are not written to JSON. The source `情感` column is not used as the gold label; row fill color is the gold label. The converter writes to the Git-ignored `data/beer_sentiment_benchmark_real.jsonl` by default. `pytest` continues to exercise the synthetic Benchmark committed under `benchmark/`; the local real-Benchmark smoke test runs only when its private file exists. Set `BEER_SENTIMENT_REAL_BENCHMARK` to test a different local JSONL path.
 
 ## Hybrid RAG
 
@@ -112,4 +137,4 @@ export DEEPSEEK_API_KEY=...
 
 ## Note
 
-The Benchmark JSONL in this repository is generated from the manually colored Excel examples under `benchmark/`; blank rows without text are skipped. The original Excel workbooks are local inputs and remain ignored by Git. Simulated model prices and latencies are placeholders; replace them with measured values after connecting real APIs.
+The Benchmark JSONL committed to this repository is synthetic. Real manually colored Excel inputs and the converted `data/beer_sentiment_benchmark_real.jsonl` remain local and are ignored by Git; blank rows without text are skipped during conversion. Simulated model prices and latencies are placeholders; replace them with measured values after connecting real APIs.

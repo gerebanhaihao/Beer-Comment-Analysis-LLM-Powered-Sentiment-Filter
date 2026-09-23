@@ -24,6 +24,7 @@ from beer_sentiment.io.csv_io import (
 )
 from beer_sentiment.io.excel import write_colored_excel
 from beer_sentiment.io.filenames import output_filename, review_filename
+from beer_sentiment.io.ingest import ingest_directory
 from beer_sentiment.llm.base import Judge
 from beer_sentiment.llm.mock import MockJudge
 from beer_sentiment.llm.openai_compat import OpenAICompatJudge
@@ -178,6 +179,24 @@ def cmd_prepare(args, config: AppConfig) -> None:
     print(f"待筛选文件：{out_path.resolve()}")
 
 
+def cmd_ingest(args) -> None:
+    results = ingest_directory(
+        args.input_dir,
+        args.data_dir,
+        move=args.move,
+        encoding=args.encoding,
+    )
+    if not results:
+        print(f"接入目录没有 CSV：{Path(args.input_dir).resolve()}")
+        return
+    for result in results:
+        target = f" -> {Path(result.destination).resolve()}" if result.destination else ""
+        print(f"[{result.status}] {Path(result.source).name}{target}：{result.message}")
+    rejected = sum(result.status == "rejected" for result in results)
+    if rejected:
+        sys.exit(1)
+
+
 def cmd_build(args, config: AppConfig) -> None:
     review_path = Path(args.review_csv)
     rows, _ = read_csv_rows(review_path, "auto")
@@ -314,6 +333,19 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument("--text-column", action="append", dest="text_columns")
     prepare_parser.add_argument("--encoding", default="auto")
 
+    ingest_parser = sub.add_parser(
+        "ingest",
+        help="接入本地下载的 Quark CSV，不连接外部平台",
+    )
+    ingest_parser.add_argument("--input-dir", default="incoming")
+    ingest_parser.add_argument("--data-dir", default="data")
+    ingest_parser.add_argument(
+        "--move",
+        action="store_true",
+        help="接入成功后把 CSV 从 input-dir 移入 data-dir；默认只复制",
+    )
+    ingest_parser.add_argument("--encoding", default="auto")
+
     build_parser_cmd = sub.add_parser("build", help="按人工筛选结果生成着色 Excel")
     build_parser_cmd.add_argument("--review-csv", required=True)
     build_parser_cmd.add_argument("--session", choices=["morning", "afternoon"], required=True)
@@ -353,6 +385,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     load_env_file()
+    if args.command == "ingest":
+        cmd_ingest(args)
+        return
+
     config = load_config(args.config_dir)
     if args.command == "prepare":
         cmd_prepare(args, config)
