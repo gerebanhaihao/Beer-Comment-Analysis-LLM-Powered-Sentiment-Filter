@@ -6,6 +6,19 @@ The project is designed for real-world business scenarios: raw CSV data comes fr
 
 ## Quick Start
 
+## Windows 桌面版
+
+界面入口是 `python -m beer_sentiment.gui`。在项目根目录打包：
+
+```powershell
+python -m pip install -e ".[llm]" pyinstaller
+powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1
+```
+
+成品位于 `dist/BeerSentiment/BeerSentiment.exe`，不要运行 `build/BeerSentiment/` 中的 PyInstaller 中间文件。请保留整个 `dist/BeerSentiment` 文件夹，exe 运行需要同级的 `_internal/`；`config/` 和 `prompts/` 可直接修改，`data/` 放待处理 CSV，结果写入 `output/`。界面默认使用离线 `mock` 模型；`deepseek-v4`、`qwen-max` 和 `kimi-k3` 仍为模拟模型。使用真实 `deepseek` 时，需在 exe 同级放置 `.env` 并设置 `DEEPSEEK_API_KEY`；当前轻量发布版不含 Dense RAG 依赖，需要在界面勾选“关闭 RAG”。
+
+增加新功能后，修改源码并再次运行打包脚本。脚本会把旧发布目录保留为 `dist/BeerSentiment-backup-时间戳/`，再生成新版；需要继续使用旧数据时，从备份目录复制 `data/`、`incoming/`、`output/`、`.env` 和已修改的 `config/`。exe 本身不能直接修改源码功能。
+
 ```bash
 pip install -e ".[llm,dev]"
 
