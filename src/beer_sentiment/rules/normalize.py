@@ -81,7 +81,13 @@ def _edit_distance(left: str, right: str, limit: int | None = None) -> int:
     return previous[-1]
 
 
-def _fuzzy_contains(text: str, term: str, max_distance: int, min_length: int) -> bool:
+def _fuzzy_contains(
+    text: str,
+    term: str,
+    max_distance: int,
+    min_length: int,
+    protected_spans: list[tuple[int, int]] | None = None,
+) -> bool:
     if not term or len(term) < min_length:
         return False
     if term in text:
@@ -95,6 +101,11 @@ def _fuzzy_contains(text: str, term: str, max_distance: int, min_length: int) ->
     max_window = min(len(text), len(term) + max_distance)
     for window_length in range(min_window, max_window + 1):
         for start in range(0, len(text) - window_length + 1):
+            if any(
+                start < end and start + window_length > begin
+                for begin, end in protected_spans or []
+            ):
+                continue
             window = text[start : start + window_length]
             if _edit_distance(window, term, max_distance) <= max_distance:
                 return True
@@ -119,25 +130,57 @@ def _brand_terms(config: AppConfig) -> Iterator[tuple[str, str]]:
                 yield brand, term
 
 
-def _matches(term: str, compact_text: str, config: AppConfig) -> bool:
+def _matches(
+    term: str,
+    compact_text: str,
+    config: AppConfig,
+    *,
+    allow_fuzzy: bool = True,
+    protected_spans: list[tuple[int, int]] | None = None,
+) -> bool:
     normalized_term = _compact(term)
     if not normalized_term:
         return False
     if normalized_term in compact_text:
         return True
+    if not allow_fuzzy:
+        return False
     matching = config.matching or {}
     if not bool(matching.get("fuzzy_enabled", True)):
         return False
     max_distance = int(matching.get("max_edit_distance", 1))
     min_length = int(matching.get("min_fuzzy_length", 2))
-    return _fuzzy_contains(compact_text, normalized_term, max_distance, min_length)
+    return _fuzzy_contains(
+        compact_text, normalized_term, max_distance, min_length, protected_spans
+    )
 
 
 def extract_brands(text: str, config: AppConfig) -> list[str]:
     """Return canonical brands found by alias, pinyin or fuzzy matching."""
     compact_text = _compact(text)
+    terms = list(_brand_terms(config))
     brands: list[str] = []
-    for brand, term in _brand_terms(config):
-        if brand not in brands and _matches(term, compact_text, config):
+    protected_spans: list[tuple[int, int]] = []
+    for brand, term in terms:
+        normalized_term = _compact(term)
+        if not normalized_term:
+            continue
+        if normalized_term in compact_text and brand not in brands:
+            brands.append(brand)
+        protected_spans.extend(
+            match.span() for match in re.finditer(re.escape(normalized_term), compact_text)
+        )
+
+    for brand, term in terms:
+        if brand in brands:
+            continue
+        # Short aliases such as 哈啤/青啤 are easy to confuse with ordinary
+        # two-character fragments. Keep their exact matches, but do not fuzz them.
+        allow_fuzzy = len(_compact(term)) > 2 or _compact(term) == _compact(brand)
+        if _matches(
+            term, compact_text, config,
+            allow_fuzzy=allow_fuzzy,
+            protected_spans=protected_spans,
+        ):
             brands.append(brand)
     return brands

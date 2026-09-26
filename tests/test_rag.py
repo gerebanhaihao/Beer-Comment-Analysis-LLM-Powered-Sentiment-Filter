@@ -35,10 +35,10 @@ class FakeCrossEncoder:
         return [float("杂质" in query and "杂质" in text) for query, text in pairs]
 
 
-def make_retriever(kb, config=None, cross_encoder=None):
+def make_retriever(kb, config=None, cross_encoder=None, brand_config=None):
     return HybridRetriever(
         kb, config or {}, embedding_model=FakeEmbeddingModel(),
-        cross_encoder=cross_encoder or FakeCrossEncoder(),
+        cross_encoder=cross_encoder or FakeCrossEncoder(), brand_config=brand_config,
     )
 
 
@@ -101,6 +101,30 @@ def test_retriever_finds_relevant_entries():
     ids = {item.entry.id for item in results}
     assert "ex-own-quality" in ids or "rule-blue-vs-yellow" in ids
     assert len(results) <= 5
+
+
+def test_bm25_uses_corrected_brand_while_dense_keeps_original(config):
+    kb = KnowledgeBase.from_yaml(KB_PATH)
+    retriever = make_retriever(kb, brand_config=config)
+    seen = {}
+
+    def sparse_search(tokens, top_k):
+        seen["sparse_tokens"] = tokens
+        return []
+
+    def dense_search(query, top_k):
+        seen["dense_query"] = query
+        return []
+
+    retriever.sparse.search = sparse_search
+    retriever.dense.search = dense_search
+    original = "百威和青道啤酒狗兑，太难喝"
+    retriever.retrieve(original)
+
+    assert "百威" in seen["sparse_tokens"]
+    assert "青岛" in seen["sparse_tokens"]
+    assert "勾兑" in seen["sparse_tokens"]
+    assert seen["dense_query"] == original
 
 
 def test_reranker_failure_falls_back_to_rrf():

@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
+from beer_sentiment.config import AppConfig
 from beer_sentiment.rag.dense import DenseIndex, load_embedding_model
 from beer_sentiment.rag.knowledge import KnowledgeBase, KnowledgeEntry
 from beer_sentiment.rag.sparse import BM25Index
 from beer_sentiment.rag.tokenize import tokenize
+from beer_sentiment.rules.normalize import extract_brands, normalize_ocr_noise
 
 
 def rrf_fuse(rankings: list[list[int]], k: int = 60) -> list[tuple[int, float]]:
@@ -69,9 +71,11 @@ class HybridRetriever:
         *,
         embedding_model: Any | None = None,
         cross_encoder: Any | None = None,
+        brand_config: AppConfig | None = None,
     ) -> None:
         cfg = rag_config or {}
         self.kb = knowledge_base
+        self.brand_config = brand_config
         self.sparse = BM25Index(
             [tokenize(entry.text) for entry in knowledge_base.entries],
             k1=float(cfg.get("sparse", {}).get("k1", 1.5)),
@@ -99,8 +103,15 @@ class HybridRetriever:
         final_k = self.default_top_k if top_k is None else top_k
         if final_k <= 0:
             return []
+        # Keep the original query for embeddings. Add canonical brand names only
+        # to BM25 so OCR errors and aliases can match knowledge-base terms.
+        sparse_query = normalize_ocr_noise(query)
+        if self.brand_config is not None:
+            brands = extract_brands(sparse_query, self.brand_config)
+            if brands:
+                sparse_query += "\n" + " ".join(brands)
         sparse_ranking = [
-            index for index, _ in self.sparse.search(tokenize(query), self.sparse_top_k)
+            index for index, _ in self.sparse.search(tokenize(sparse_query), self.sparse_top_k)
         ]
         dense_ranking = [index for index, _ in self.dense.search(query, self.dense_top_k)]
         fused = rrf_fuse([sparse_ranking, dense_ranking], k=self.rrf_k)

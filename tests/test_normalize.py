@@ -24,5 +24,11 @@ def test_extract_brands_with_fuzzy_and_pinyin(config):
     assert "百威" in extract_brands("baiwei beer", config)
 
 
+def test_fuzzy_brand_at_other_position_after_exact_brand(config):
+    brands = extract_brands("百威和青道啤酒都被投诉", config)
+    assert "百威" in brands
+    assert "青岛" in brands
+
+
 def test_product_alias_matches_brand(config):
     assert "雪花" in extract_brands("勇闯天涯卖不动", config)

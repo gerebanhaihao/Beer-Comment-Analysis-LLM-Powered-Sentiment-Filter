@@ -117,6 +117,11 @@ Brand matching supports exact aliases, English aliases, pinyin aliases, and
 one-edit-distance fuzzy matching. Product names such as `勇闯天涯` are kept as
 ordinary aliases of their parent brand in `config/brands.yaml`.
 
+For Hybrid RAG, the BM25 query uses the combined text after OCR typo
+normalization and adds canonical names for matched brands. Dense retrieval and
+model judgment still receive the combined original text; output columns keep
+the source CSV values.
+
 ## Evaluation Metrics
 
 `eval` outputs accuracy, macro-average F1, negative detection precision/recall/F1, false positive rate, false negative rate, confusion matrix, average latency, and cost. Each experiment is archived under `artifacts/runs/` with model name, prompt version, config hash, metrics, and Bad Cases. Multi-model evaluation generates an additional comparison table at `artifacts/reports/model_compare.md`.

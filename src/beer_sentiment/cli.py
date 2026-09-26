@@ -91,7 +91,7 @@ def build_judge(name: str, config: AppConfig, use_rag: bool | None = None) -> Ju
                 config.config_dir.parent / config.rag.get("knowledge_base", "config/knowledge_base.yaml")
             )
             knowledge_base = KnowledgeBase.from_yaml(kb_path)
-            retriever = HybridRetriever(knowledge_base, config.rag)
+            retriever = HybridRetriever(knowledge_base, config.rag, brand_config=config)
             max_chars = int(config.rag.get("fewshot", {}).get("max_context_chars", 1500))
             return RagJudge(judge, retriever, max_context_chars=max_chars)
         return judge
