@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = ["openai>=1.30"]
+rag = ["sentence-transformers>=3.0"]
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
 [project.scripts]

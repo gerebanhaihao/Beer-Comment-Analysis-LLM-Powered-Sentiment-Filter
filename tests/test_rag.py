@@ -5,13 +5,41 @@ from __future__ import annotations
 from pathlib import Path
 
 from beer_sentiment.llm.mock import MockJudge
-from beer_sentiment.rag.dense import DenseIndex, cosine, embed
-from beer_sentiment.rag.hybrid import HybridRetriever, LLMReranker, rrf_fuse
+from beer_sentiment.rag.dense import DenseIndex, cosine
+from beer_sentiment.rag.hybrid import CrossEncoderReranker, HybridRetriever, rrf_fuse
 from beer_sentiment.rag.judge import RagJudge
 from beer_sentiment.rag.knowledge import KnowledgeBase
 from beer_sentiment.rag.tokenize import tokenize
 
 KB_PATH = Path(__file__).resolve().parents[1] / "config" / "knowledge_base.yaml"
+
+
+class FakeEmbeddingModel:
+    """Deterministic test double for the embedding model's batch API."""
+
+    def encode(self, texts, normalize_embeddings=False):
+        assert normalize_embeddings
+        vectors = []
+        for text in texts:
+            vectors.append([
+                float(any(word in text for word in ("乌苏", "上头", "后劲", "吐"))),
+                float(any(word in text for word in ("百威", "杂质", "投诉"))),
+                float(any(word in text for word in ("青岛", "营收", "下滑"))),
+                float(any(word in text for word in ("足球", "比赛"))),
+            ])
+        return vectors
+
+
+class FakeCrossEncoder:
+    def predict(self, pairs):
+        return [float("杂质" in query and "杂质" in text) for query, text in pairs]
+
+
+def make_retriever(kb, config=None, cross_encoder=None):
+    return HybridRetriever(
+        kb, config or {}, embedding_model=FakeEmbeddingModel(),
+        cross_encoder=cross_encoder or FakeCrossEncoder(),
+    )
 
 
 def test_tokenize_chinese_bigrams():
@@ -36,25 +64,15 @@ def test_bm25_ranks_relevant_doc_first():
 
 
 def test_dense_index_relevant_doc_first():
-    docs = [
-        tokenize("怀旧：小时候绿瓶啤酒的味道"),
-        tokenize("乌苏啤酒后劲大上头，喝吐了"),
-        tokenize("足球比赛直播预告"),
-    ]
-    index = DenseIndex(docs, dim=128)
-    hits = index.search(tokenize("乌苏 后劲 上头 吐"), top_k=3)
+    docs = ["怀旧：小时候绿瓶啤酒的味道", "乌苏啤酒后劲大上头，喝吐了", "足球比赛直播预告"]
+    index = DenseIndex(docs, FakeEmbeddingModel())
+    hits = index.search("乌苏 后劲 上头 吐", top_k=3)
     assert hits
     assert hits[0][0] == 1
 
 
-def test_embed_is_normalized():
-    vector = embed(tokenize("青岛啤酒销量下滑"), dim=64)
-    norm = sum(value * value for value in vector) ** 0.5
-    assert abs(norm - 1.0) < 1e-6
-
-
 def test_cosine_identical_vectors():
-    vector = embed(tokenize("啤酒负面舆情"), dim=32)
+    vector = [0.6, 0.8]
     assert cosine(vector, vector) > 0.99
 
 
@@ -78,7 +96,7 @@ def test_knowledge_base_load_and_format():
 
 def test_retriever_finds_relevant_entries():
     kb = KnowledgeBase.from_yaml(KB_PATH)
-    retriever = HybridRetriever(kb, {"fewshot": {"top_k": 5}}, model_config=None)
+    retriever = make_retriever(kb, {"fewshot": {"top_k": 5}})
     results = retriever.retrieve("百威啤酒喝出杂质拉肚子，投诉没人理")
     ids = {item.entry.id for item in results}
     assert "ex-own-quality" in ids or "rule-blue-vs-yellow" in ids
@@ -86,23 +104,39 @@ def test_retriever_finds_relevant_entries():
 
 
 def test_reranker_failure_falls_back_to_rrf():
-    class BrokenReranker(LLMReranker):
-        def _get_client(self):
-            raise RuntimeError("no api")
+    class BrokenCrossEncoder:
+        def predict(self, pairs):
+            raise RuntimeError("inference failed")
 
     kb = KnowledgeBase.from_yaml(KB_PATH)
     config = {"fewshot": {"top_k": 5}}
-    retriever = HybridRetriever(kb, config, model_config={"model": "x"})
-    retriever.reranker = BrokenReranker({"model": "x"})
-    retriever.rerank_enabled = True
+    retriever = make_retriever(kb, config, BrokenCrossEncoder())
     results = retriever.retrieve("青岛啤酒营收下滑卖不动")
     assert results
     assert all(item.stage == "rrf" for item in results)
 
 
+def test_cross_encoder_reorders_fused_candidates():
+    kb = KnowledgeBase.from_yaml(KB_PATH)
+    retriever = make_retriever(kb, {"fewshot": {"top_k": 3}})
+    results = retriever.retrieve("百威啤酒喝出杂质，投诉无果")
+    assert results[0].stage == "rerank"
+    assert "杂质" in results[0].entry.text
+
+
+def test_cross_encoder_rejects_invalid_scores():
+    class InvalidCrossEncoder:
+        def predict(self, pairs):
+            return [float("nan")] * len(pairs)
+
+    kb = KnowledgeBase.from_yaml(KB_PATH)
+    reranker = CrossEncoderReranker(InvalidCrossEncoder())
+    assert reranker.rerank("查询", kb.entries[:2]) is None
+
+
 def test_rag_judge_injects_context(config):
     kb = KnowledgeBase.from_yaml(KB_PATH)
-    retriever = HybridRetriever(kb, {"fewshot": {"top_k": 3}}, model_config=None)
+    retriever = make_retriever(kb, {"fewshot": {"top_k": 3}})
     captured = {}
 
     class CapturingJudge(MockJudge):

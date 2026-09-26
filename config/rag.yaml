@@ -8,17 +8,17 @@ sparse: # BM25 稀疏召回
   k1: 1.5
   b: 0.75
 
-dense: # 特征哈希稠密召回
+dense: # SentenceTransformer 语义向量召回
   top_k: 10
-  dim: 256
+  model: BAAI/bge-small-zh-v1.5
 
 rrf: # 倒数排名融合
   k: 60
 
-rerank: # Cross-Encoder（LLM 打分）重排序，失败自动回退 RRF 顺序
-  enabled: true
+rerank: # 独立 CrossEncoder 模型重排序，推理失败回退 RRF 顺序
+  enabled: false
   top_n: 8
-  temperature: 0.0
+  model: BAAI/bge-reranker-base
 
 fewshot: # 最终注入 Prompt 的条数与长度上限
   top_k: 5

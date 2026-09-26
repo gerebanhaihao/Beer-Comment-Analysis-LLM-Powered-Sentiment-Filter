@@ -9,6 +9,9 @@ The project is designed for real-world business scenarios: raw CSV data comes fr
 ```bash
 pip install -e ".[llm,dev]"
 
+# For real-model runs with Hybrid RAG, install the embedding and CrossEncoder runtime:
+pip install -e ".[rag]"
+
 # Drop raw Quark CSV files into data/, then run end to end (the default is an offline simulation):
 beer-sentiment run --all-time
 
@@ -113,12 +116,12 @@ The private converted Benchmark uses sequential IDs (`b000001`, `b000002`, ...),
 
 - **Knowledge base** (`config/knowledge_base.yaml`): judgment rules (OCR cross-column reading, keyword-hint-only, teaching/merchant/counterfeit/nostalgia exclusions, blue-vs-yellow mapping) and labeled few-shot examples, continuously maintained from Bad Cases.
 - **Sparse retrieval**: BM25 over character n-grams (`rag/sparse.py`).
-- **Dense retrieval**: feature-hashed character n-gram vectors with cosine similarity, dependency-free and deterministic (`rag/dense.py`).
+- **Dense retrieval**: `SentenceTransformer` creates semantic embeddings for knowledge entries at startup and for each query; normalized vectors are compared by cosine similarity (`rag/dense.py`). The default Chinese model is `BAAI/bge-small-zh-v1.5`.
 - **Fusion**: Reciprocal Rank Fusion (RRF, k=60) over both rankings (`rag/hybrid.py`).
-- **Reranking**: a Cross-Encoder-style LLM scorer (one batched API call per query) reorders the top-N fused candidates; on any failure it falls back to the RRF order.
+- **Reranking**: disabled by default for the current small knowledge base. It can optionally use an independent `CrossEncoder` model (`BAAI/bge-reranker-base`) to score query–candidate pairs; invalid scores or inference errors fall back to the RRF order.
 - **Injection**: `RagJudge` renders the top-k entries into the "参考上下文" block of the judgment prompt.
 
-All knobs live in `config/rag.yaml` (top-k per stage, RRF k, rerank on/off, few-shot count, context length cap).
+Model names and retrieval knobs live in `config/rag.yaml` (top-k per stage, RRF k, rerank on/off, few-shot count, context length cap). Install the `rag` extra before running a real model with RAG. The first run downloads both model weights from Hugging Face; subsequent runs use its local cache. Dense model loading or inference errors stop the run rather than silently replacing semantic retrieval with keyword matching. The reranker can be disabled with `rerank.enabled: false`.
 
 ## Connecting Real Models
 
