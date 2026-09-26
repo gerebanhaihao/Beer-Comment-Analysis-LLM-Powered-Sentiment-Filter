@@ -15,7 +15,7 @@ python -m pip install -e ".[llm]" pyinstaller
 powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1
 ```
 
-成品位于 `dist/BeerSentiment/BeerSentiment.exe`，不要运行 `build/BeerSentiment/` 中的 PyInstaller 中间文件。请保留整个 `dist/BeerSentiment` 文件夹，exe 运行需要同级的 `_internal/`；`config/` 和 `prompts/` 可直接修改，`data/` 放待处理 CSV，结果写入 `output/`。界面默认使用离线 `mock` 模型；`deepseek-v4`、`qwen-max` 和 `kimi-k3` 仍为模拟模型。使用真实 `deepseek` 时，需在 exe 同级放置 `.env` 并设置 `DEEPSEEK_API_KEY`；当前轻量发布版不含 Dense RAG 依赖，需要在界面勾选“关闭 RAG”。
+成品位于 `dist/BeerSentiment/BeerSentiment.exe`。请保留整个 `dist/BeerSentiment` 文件夹，exe 运行需要同级的 `_internal/`。桌面界面提供“导入 CSV”“自动筛选”和“模型评测”三个功能。自动筛选和评测可选择 DeepSeek、Qwen 或 Kimi，并在界面中输入对应的 API 密钥；密钥只在当次运行的内存中使用，不写入配置文件或日志。当前轻量发布版不包含 Dense RAG 模型，但会使用品牌别名、拼音、编辑距离匹配和其他本地筛选规则。
 
 增加新功能后，修改源码并再次运行打包脚本。脚本会把旧发布目录保留为 `dist/BeerSentiment-backup-时间戳/`，再生成新版；需要继续使用旧数据时，从备份目录复制 `data/`、`incoming/`、`output/`、`.env` 和已修改的 `config/`。exe 本身不能直接修改源码功能。
 
@@ -25,10 +25,7 @@ pip install -e ".[llm,dev]"
 # For real-model runs with Hybrid RAG, install the embedding and CrossEncoder runtime:
 pip install -e ".[rag]"
 
-# Drop raw Quark CSV files into data/, then run end to end (the default is an offline simulation):
-beer-sentiment run --all-time
-
-# Use a real OpenAI-compatible DeepSeek endpoint after configuring its API key:
+# Drop raw Quark CSV files into data/, then use a real model after configuring its API key:
 beer-sentiment run --input-dir data --output-dir output --all-time --model deepseek
 
 # Run without API Key: use mock LLM (prepare your own CSVs in data/ first)

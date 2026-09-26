@@ -289,7 +289,9 @@ def cmd_eval(args, config: AppConfig) -> None:
     )
     entries = []
     for name in model_names:
-        judge = build_judge(name, config)
+        judge = build_judge(
+            name, config, use_rag=False if getattr(args, "no_rag", False) else None
+        )
         metrics = evaluate(samples, judge)
         paths = save_run(args.artifacts_dir, name, metrics, args.benchmark, config.digest())
         entries.append((name, metrics))
@@ -376,9 +378,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--model",
         dest="models",
         default=None,
-        help="逗号分隔的模型名，例如 deepseek-v4,qwen-max,kimi-k3",
+        help="逗号分隔的模型名，例如 deepseek,qwen,kimi",
     )
     eval_parser.add_argument("--artifacts-dir", default="artifacts")
+    eval_parser.add_argument(
+        "--no-rag",
+        action="store_true",
+        help="关闭 Hybrid RAG 检索，只用裸模型评测",
+    )
     return parser
 
 

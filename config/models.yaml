@@ -1,4 +1,4 @@
-default: deepseek-v4
+default: deepseek
 
 models:
   mock:
@@ -48,8 +48,20 @@ models:
   deepseek:
     type: openai_compatible
     display_name: "DeepSeek"
-    base_url: "https://api.deepseek.com/v1"
-    model: "deepseek-chat"
+    base_url: "https://api.deepseek.com"
+    model: "deepseek-flash"
     api_key_env: "DEEPSEEK_API_KEY"
-    input_price_per_million: 0.27
-    output_price_per_million: 1.10
+
+  qwen:
+    type: openai_compatible
+    display_name: "Qwen"
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    model: "qwen3.8-max"
+    api_key_env: "DASHSCOPE_API_KEY"
+
+  kimi:
+    type: openai_compatible
+    display_name: "Kimi"
+    base_url: "https://api.moonshot.cn/v1"
+    model: "kimi-k3"
+    api_key_env: "MOONSHOT_API_KEY"
