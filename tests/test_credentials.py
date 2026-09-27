@@ -1,6 +1,11 @@
+import sys
+
+import pytest
+
 from beer_sentiment.credentials import load_saved_keys, save_key
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="DPAPI 只在 Windows 上可用")
 def test_saved_keys_round_trip_encrypted_for_current_windows_user(tmp_path):
     path = tmp_path / "credentials.json"
     save_key("deepseek", "secret-deepseek", path)
