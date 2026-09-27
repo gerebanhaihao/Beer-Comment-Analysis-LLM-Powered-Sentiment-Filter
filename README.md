@@ -1,156 +1,44 @@
 # Beer-Comment-Analysis-LLM-Powered-Sentiment-Filter
 
-A two-stage sentiment filtering pipeline for the beer industry: first, rule-based rough screening using brand lexicon and keywords; then, semantic judgment by LLM on candidate rows, outputting Excel files with own-brand negatives marked in blue and competitor/industry negatives marked in yellow. The system also includes human-annotated Benchmark, multi-model evaluation, Bad Case archiving, experiment report generation, and a Hybrid RAG module (Dense + Sparse retrieval, RRF fusion, Cross-Encoder reranking) that injects retrieved judgment rules and few-shot examples into the prompt.
+## Overview
 
-The project is designed for real-world business scenarios: raw CSV data comes from web-scraped beer industry posts (via Quark), which are noisy, heavily colloquial, contain OCR errors, and where "keyword hit" does not necessarily equal negative sentiment. The repository only retains desensitized sample data and synthesized Benchmark; real scraped data is not included.
+本项目用于筛选啤酒行业负面舆情。原始数据是从夸克等渠道导出的帖子 CSV，程序本身不负责抓取或连接数据平台。它先用品牌词、关键词、拼音别名及错字匹配粗筛，再交由大模型结合标题、正文和 OCR 内容判断，输出带颜色标记的 Excel：本品负面为蓝色，竞品或行业负面为黄色。低置信度结果可由人工复核。
+
+完整流程是：导入 CSV → 按日期、场次筛选并进行规则粗筛 → 为候选帖子检索相关判定规则与示例 → 大模型判断 → 人工复核低置信度结果 → 生成着色 Excel。未进入候选集的帖子不会逐条调用大模型。
+
+## Features
+
+Windows 桌面界面提供“导入 CSV”“自动筛选”“模型评测”三种模式。可一次选择多个 CSV，自动筛选默认选取最近导入的两个文件；按日期和上午、下午场次处理，也可勾选“处理全部时间”。自动筛选支持 DeepSeek、Qwen、Kimi；知识库检索结合 BM25（检索前会修正常见 OCR 错字）与 Embedding 语义检索，随后用 RRF 融合两路结果，选出与帖子相关的规则和示例，连同帖子提供给大语言模型。评测读取本地标注数据，生成准确率、宏平均 F1、负面识别指标等报告，并记录误判样本，方便回看和调整规则。界面中的 API 密钥可保存，保存时使用当前 Windows 用户的 DPAPI 加密。
+
+## Screenshots
+
+自动筛选完成后的界面：
+
+![自动筛选运行截图](docs/images/auto-filter.png)
+
+模型评测完成后的界面：
+
+![模型评测运行截图](docs/images/model-evaluation.png)
 
 ## Quick Start
 
-## Windows 桌面版
-
-界面入口是 `python -m beer_sentiment.gui`。在项目根目录打包：
+在项目根目录安装依赖并启动桌面界面：
 
 ```powershell
-python -m pip install -e ".[llm]" pyinstaller
-powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1
+python -m pip install -e ".[llm,rag]"
+python -m beer_sentiment.gui
 ```
 
-成品位于 `dist/BeerSentiment/BeerSentiment.exe`。请保留整个 `dist/BeerSentiment` 文件夹，exe 运行需要同级的 `_internal/`。桌面界面提供“导入 CSV”“自动筛选”和“模型评测”三个功能。导入界面依次显示“程序目录”“源数据目录”“待导入目录”；可以在“源数据目录”一次选择多个 CSV，或选择整个文件夹，文件会进入“待导入目录”（默认 `data/`）。自动筛选默认选中 `data/` 中最近导入的两个 CSV，也可手动选择多个文件；只处理所选文件。开启“处理全部时间”时不按日期和场次过滤行，关闭时才按所选日期和场次筛选。输出文件名使用“品牌/行业 + 上午/下午 + 源 CSV 的 `__` 后缀”，例如 `品牌上午__2026-08-31 114223.xlsx`。自动筛选和评测可选择 DeepSeek、Qwen 或 Kimi，并在界面中输入对应的 API 密钥；点击“保存”后会使用当前 Windows 用户的 DPAPI 加密存于 `%APPDATA%/BeerSentiment/credentials.json`，下次启动自动填入。评测默认使用 `benchmark/beer_sentiment_benchmark_real.jsonl`，该文件随发布目录一起复制。当前轻量发布版不包含 Dense RAG 模型，但会使用品牌别名、拼音、编辑距离匹配和其他本地筛选规则。
+选择 CSV、模型并填写对应的 API 密钥后即可运行。源文件可通过界面导入，结果写入所选输出目录；运行日志会显示处理文件与生成路径。也可使用命令行：
 
-增加新功能后，修改源码并再次运行打包脚本。脚本会把旧发布目录保留为 `dist/BeerSentiment-backup-时间戳/`，再生成新版；需要继续使用旧数据时，从备份目录复制 `data/`、`output/`、`.env` 和已修改的 `config/`。exe 本身不能直接修改源码功能。
-
-```bash
-pip install -e ".[llm,dev]"
-
-# For real-model runs with Hybrid RAG, install the embedding and CrossEncoder runtime:
-pip install -e ".[rag]"
-
-# Drop raw Quark CSV files into data/, then use a real model after configuring its API key:
+```powershell
 beer-sentiment run --input-dir data --output-dir output --all-time --model deepseek
-
-# Run without API Key: use mock LLM (prepare your own CSVs in data/ first)
-beer-sentiment run --input-dir data --output-dir output --all-time --model mock
-
-# Disable Hybrid RAG (plain LLM judgment only):
-beer-sentiment run --all-time --no-rag
-
-# Evaluate the local real Benchmark (default: benchmark/beer_sentiment_benchmark_real.jsonl)
-beer-sentiment eval --models deepseek-v4,qwen-max,kimi-k3
-
-# Convert manually colored Benchmark Excel files to a local, Git-ignored JSONL
-python scripts/convert_benchmark_excel.py
-
-# Or choose a different local Benchmark explicitly
-beer-sentiment eval --benchmark benchmark/beer_sentiment_benchmark_real.jsonl --models deepseek-v4,qwen-max,kimi-k3
-
-# Run the local real-Benchmark smoke test; it skips automatically when the file is absent
-pytest tests/test_real_benchmark_local.py
-
-# Optional: validate and import daily Quark CSV exports from a local inbox
-beer-sentiment ingest --input-dir C:/path/to/downloads --data-dir data
-
-# Use --move to physically move successfully imported files into data/
-beer-sentiment ingest --input-dir C:/path/to/downloads --data-dir data --move
 ```
 
-`.env` at the project root (already git-ignored, only needed for real API calls):
+Windows 打包需另装 `pyinstaller`，再执行 `scripts/build_windows.ps1`。脚本还要求本地真实评测集和已缓存的 `bge-small-zh-v1.5` 模型，重新打包前应保留本地数据与输出文件。
 
-```text
-DEEPSEEK_API_KEY=sk-...
-```
+## Repository
 
-Notes:
+`src/beer_sentiment/` 是核心代码目录：`rules/` 负责品牌识别与粗筛，`rag/` 检索知识库，`pipeline/` 串联处理步骤，`llm/` 对接模型并解析结果，`io/` 读写 CSV 与 Excel，`eval/` 生成评测指标和报告，`gui.py` 是桌面界面入口。项目根目录的 `config/` 管理品牌词、模型和流程参数，`prompts/` 存放判断提示词，`tests/` 包含自动化测试；`benchmark/beer_sentiment_benchmark.jsonl` 是用于公开示例和测试的合成样本。
 
-- `run` defaults to `--input-dir data --output-dir output`; colored Excel files are written next to the source file name (own-brand negatives in blue, competitor/industry negatives in yellow).
-- With `--all-time` every CSV row is processed; without it, rows are filtered to the morning/afternoon time window defined in `config/pipeline.yaml`.
-- In the desktop app, rows below `stage2.low_confidence_threshold` (currently 0.6) pause before Excel generation for manual blue/yellow/no-color judgment, regardless of the model's suggested label. The CLI prints unresolved rows for human review and leaves them uncolored.
-- `mock` is not a real model. It is an offline rule-based baseline used for tests and smoke runs.
-- `deepseek-v4`, `qwen-max`, and `kimi-k3` are deterministic local simulations until their real APIs are configured. Their metrics must not be presented as real model performance.
-
-Human review workflow is also supported:
-
-```bash
-beer-sentiment prepare --input-dir data --session morning --date 2026-08-24
-beer-sentiment build --review-csv 待筛选_上午.csv --session morning
-```
-
-## Directory Structure
-
-```text
-beer-comment-analysis/
-├── benchmark/                 # Human-annotated Benchmark (desensitized subset)
-├── config/                    # Brand lexicon, keywords, pipeline, model & RAG configs
-├── prompts/                   # Versioned judgment prompts
-├── data/                      # Validated raw Quark CSV data（本地保留、不入库，见 .gitignore）
-├── src/beer_sentiment/
-│   ├── rules/                 # Stage 1: OCR normalization, fuzzy brand-alias matching, candidate filtering
-│   ├── llm/                   # Stage 2: Mock / OpenAI-compatible models, structured output
-│   ├── rag/                   # Hybrid RAG: BM25 + Dense vectors, RRF, Cross-Encoder rerank
-│   ├── pipeline/              # Two-stage pipeline and end-to-end execution
-│   ├── eval/                  # Benchmark, metrics, experiment reports
-│   └── io/                    # CSV/Excel, time window, file naming
-├── tests/                     # pytest unit tests and end-to-end tests
-└── artifacts/                 # Evaluation logs and reports (not committed)
-```
-
-## Judgment Rules
-
-- Own-brand negatives (Budweiser, Harbin, Corona, Sedrin) → **blue**.
-- Competitor negatives (Tsingtao, Snow, Wusu, Heineken, RIO, Lubao) and industry-wide negatives → **yellow**.
-- Must read `正文 / 封面OCR / 内容OCR / 标题` columns together; never rely on a single column.
-- Keywords are signals only — do not label educational content, promotional comparisons, personal experiences, third-party counterfeiting, or nostalgic memories just because keywords appear.
-- Low-confidence samples are not auto-labeled and enter the human review queue.
-
-## Local File Ingestion and Brand Matching
-
-The project does not connect to Quark. The optional `ingest` command validates
-selected CSV files or files in a chosen source folder, skips content duplicates,
-and copies them into `data/`; add `--move` to move successfully imported files.
-Files can also be placed directly in `data/`, which remains the runtime input directory.
-
-Brand matching supports exact aliases, English aliases, pinyin aliases, and
-one-edit-distance fuzzy matching. Product names such as `勇闯天涯` are kept as
-ordinary aliases of their parent brand in `config/brands.yaml`.
-
-For Hybrid RAG, the BM25 query uses the combined text after OCR typo
-normalization and adds canonical names for matched brands. Dense retrieval and
-model judgment still receive the combined original text; output columns keep
-the source CSV values.
-
-## Evaluation Metrics
-
-`eval` outputs accuracy, macro-average F1, negative detection precision/recall/F1, false positive rate, false negative rate, confusion matrix, average latency, and cost. Each experiment is archived under `artifacts/runs/` with model name, prompt version, config hash, metrics, and Bad Cases. Multi-model evaluation generates an additional comparison table at `artifacts/reports/model_compare.md`.
-
-The private converted Benchmark uses sequential IDs (`b000001`, `b000002`, ...), category, data scope, title, body, cover OCR, and content OCR. Source filenames and Excel row numbers are not written to JSON. The source `情感` column is not used as the gold label; row fill color is the gold label. The converter writes to the Git-ignored `benchmark/beer_sentiment_benchmark_real.jsonl` by default. `pytest` continues to exercise the synthetic Benchmark committed under `benchmark/`; the local real-Benchmark smoke test runs only when its private file exists. Set `BEER_SENTIMENT_REAL_BENCHMARK` to test a different local JSONL path.
-
-## Hybrid RAG
-
-`src/beer_sentiment/rag/` implements the knowledge retrieval layer for Stage 2:
-
-- **Knowledge base** (`config/knowledge_base.yaml`): judgment rules (OCR cross-column reading, keyword-hint-only, teaching/merchant/counterfeit/nostalgia exclusions, blue-vs-yellow mapping) and labeled few-shot examples, continuously maintained from Bad Cases.
-- **Sparse retrieval**: BM25 over character n-grams (`rag/sparse.py`).
-- **Dense retrieval**: `SentenceTransformer` creates semantic embeddings for knowledge entries at startup and for each query; normalized vectors are compared by cosine similarity (`rag/dense.py`). The default Chinese model is `BAAI/bge-small-zh-v1.5`.
-- **Fusion**: Reciprocal Rank Fusion (RRF, k=60) over both rankings (`rag/hybrid.py`).
-- **Reranking**: disabled by default for the current small knowledge base. It can optionally use an independent `CrossEncoder` model (`BAAI/bge-reranker-base`) to score query–candidate pairs; invalid scores or inference errors fall back to the RRF order.
-- **Injection**: `RagJudge` renders the top-k entries into the "参考上下文" block of the judgment prompt.
-
-Model names and retrieval knobs live in `config/rag.yaml` (top-k per stage, RRF k, rerank on/off, few-shot count, context length cap). Install the `rag` extra before running a real model with RAG. The first run downloads both model weights from Hugging Face; subsequent runs use its local cache. Dense model loading or inference errors stop the run rather than silently replacing semantic retrieval with keyword matching. The reranker can be disabled with `rerank.enabled: false`.
-
-## Connecting Real Models
-
-`config/models.yaml` ships a `deepseek` entry (`deepseek-chat` via the OpenAI-compatible endpoint). Set the key in `.env` or export it:
-
-```bash
-export DEEPSEEK_API_KEY=...
-```
-
-## Roadmap
-
-- M1: Engineering skeleton, configs, tests, CI, demo data
-- M2: LLM judgment abstraction, Benchmark, evaluation reports
-- M3: Hybrid RAG (BM25 + Dense + RRF + Cross-Encoder) + Bad Case auto-feedback
-- M4: Streamlit demo page and automated scheduling
-
-## Note
-
-The Benchmark JSONL committed to this repository is synthetic. Real manually colored Excel inputs and the converted `benchmark/beer_sentiment_benchmark_real.jsonl` remain local and are ignored by Git; blank rows without text are skipped during conversion. Simulated model prices and latencies are placeholders; replace them with measured values after connecting real APIs.
+真实采集的 CSV、人工标注评测集、API 密钥、生成的 Excel 、评测报告与打包后的程序涉及实际业务数据或运行时凭据，均未上传 GitHub。公开的合成评测集或模拟模型结果不能当作真实模型效果。

@@ -1,3 +1,7 @@
+from copy import deepcopy
+from pathlib import Path
+
+from beer_sentiment.cli import build_judge
 from beer_sentiment.gui import MODELS, command_args, low_confidence_rows
 from beer_sentiment.models import JudgedRow, JudgeResult, Label, PreparedRow, Stage1Result
 
@@ -32,11 +36,11 @@ def test_desktop_models_are_real_openai_compatible_providers(config):
         assert provider["api_key_env"] == MODELS[name]["env"]
 
 
-def test_run_arguments_select_real_model_and_disable_unbundled_rag():
+def test_run_arguments_select_real_model_with_default_rag():
     args = command_args("run", values(model="Qwen"))
     assert args[args.index("--model") + 1] == "qwen"
     assert "--all-time" in args
-    assert "--no-rag" in args
+    assert "--no-rag" not in args
 
 
 def test_run_arguments_include_only_selected_files():
@@ -48,10 +52,28 @@ def test_run_arguments_include_only_selected_files():
     assert args[args.index("--input-file") + 1] == "data/quark__2026-08-31 114223.csv"
 
 
-def test_eval_arguments_disable_unbundled_rag():
+def test_eval_arguments_use_default_rag():
     args = command_args("eval", values(model="Kimi"))
     assert args[args.index("--models") + 1] == "kimi"
-    assert "--no-rag" in args
+    assert "--no-rag" not in args
+
+
+def test_default_rag_uses_bundled_embedding_model(config, tmp_path, monkeypatch):
+    bundled_model = tmp_path / "models" / "bge-small-zh-v1.5"
+    bundled_model.mkdir(parents=True)
+    local_config = deepcopy(config)
+    local_config.config_dir = tmp_path / "config"
+    local_config.rag["dense"]["model"] = "models/bge-small-zh-v1.5"
+    local_config.rag["knowledge_base"] = str(Path(__file__).resolve().parents[1] / "config" / "knowledge_base.yaml")
+    captured = {}
+
+    class FakeRetriever:
+        def __init__(self, _kb, rag_config, **_kwargs):
+            captured["model"] = rag_config["dense"]["model"]
+
+    monkeypatch.setattr("beer_sentiment.cli.HybridRetriever", FakeRetriever)
+    build_judge("deepseek", local_config)
+    assert captured["model"] == str(bundled_model.resolve())
 
 
 def test_ingest_arguments_can_move_files():

@@ -6,6 +6,7 @@ import argparse
 import csv
 import datetime as dt
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 from beer_sentiment.config import AppConfig, load_config, load_env_file
@@ -90,7 +91,14 @@ def build_judge(name: str, config: AppConfig, use_rag: bool | None = None) -> Ju
                 config.config_dir.parent / config.rag.get("knowledge_base", "config/knowledge_base.yaml")
             )
             knowledge_base = KnowledgeBase.from_yaml(kb_path)
-            retriever = HybridRetriever(knowledge_base, config.rag, brand_config=config)
+            rag_config = deepcopy(config.rag)
+            dense_config = rag_config.get("dense", {})
+            model_name = dense_config.get("model")
+            if model_name:
+                model_path = config.config_dir.parent / model_name
+                if model_path.is_dir():
+                    dense_config["model"] = str(model_path.resolve())
+            retriever = HybridRetriever(knowledge_base, rag_config, brand_config=config)
             max_chars = int(config.rag.get("fewshot", {}).get("max_context_chars", 1500))
             return RagJudge(judge, retriever, max_context_chars=max_chars)
         return judge
@@ -260,9 +268,7 @@ def cmd_build(args, config: AppConfig) -> None:
 
 def cmd_run(args, config: AppConfig, review_callback: ReviewCallback | None = None) -> None:
     model_name = args.model or config.default_model
-    judge = build_judge(
-        model_name, config, use_rag=False if getattr(args, "no_rag", False) else None
-    )
+    judge = build_judge(model_name, config)
     session = resolve_session(args.session)
     print(f"模型：{judge.name}")
 
@@ -305,9 +311,7 @@ def cmd_eval(args, config: AppConfig) -> None:
     )
     entries = []
     for name in model_names:
-        judge = build_judge(
-            name, config, use_rag=False if getattr(args, "no_rag", False) else None
-        )
+        judge = build_judge(name, config)
         metrics = evaluate(samples, judge)
         paths = save_run(args.artifacts_dir, name, metrics, args.benchmark, config.digest())
         entries.append((name, metrics))
@@ -383,11 +387,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="跳过时间窗过滤，处理 CSV 内全部行",
     )
-    run_parser.add_argument(
-        "--no-rag",
-        action="store_true",
-        help="关闭 Hybrid RAG 检索，只用裸模型判定",
-    )
 
     eval_parser = sub.add_parser("eval", help="在 Benchmark 上评测模型并生成报告")
     eval_parser.add_argument("--benchmark", default="benchmark/beer_sentiment_benchmark_real.jsonl")
@@ -399,11 +398,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="逗号分隔的模型名，例如 deepseek,qwen,kimi",
     )
     eval_parser.add_argument("--artifacts-dir", default="artifacts")
-    eval_parser.add_argument(
-        "--no-rag",
-        action="store_true",
-        help="关闭 Hybrid RAG 检索，只用裸模型评测",
-    )
     return parser
 
 

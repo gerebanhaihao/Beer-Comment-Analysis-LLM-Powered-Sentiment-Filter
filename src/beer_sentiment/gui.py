@@ -45,7 +45,6 @@ def command_args(mode: str, values: dict[str, str | bool | list[str]]) -> list[s
             session,
             "--model",
             model,
-            "--no-rag",
         ]
         for path in values.get("run_files") or []:
             args += ["--input-file", str(path)]
@@ -71,7 +70,6 @@ def command_args(mode: str, values: dict[str, str | bool | list[str]]) -> list[s
             str(values["output"]),
             "--models",
             model,
-            "--no-rag",
         ]
     else:
         raise ValueError(f"未知操作：{mode}")
