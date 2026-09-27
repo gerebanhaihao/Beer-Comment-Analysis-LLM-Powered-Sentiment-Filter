@@ -15,7 +15,6 @@ from typing import Any
 
 from openpyxl import load_workbook
 
-
 BLUE = {"FF00B0F0", "00FF00B0F0"}
 YELLOW = {"FFFFFF00", "00FFFFFF00"}
 NONE = {"", "00000000", "000000", "FFFFFFFF", "00FFFFFF"}
@@ -233,8 +232,8 @@ def main() -> int:
     parser.add_argument("--input-dir", default="benchmark")
     parser.add_argument(
         "--output",
-        default="data/beer_sentiment_benchmark_real.jsonl",
-        help="输出 JSONL（默认写入被 Git 忽略的本地 data/ 目录）",
+        default="benchmark/beer_sentiment_benchmark_real.jsonl",
+        help="输出 JSONL（默认写入被 Git 忽略的本地 benchmark/ 文件）",
     )
     parser.add_argument("--inspect", action="store_true", help="只检查工作簿结构，不生成 JSONL")
     args = parser.parse_args()

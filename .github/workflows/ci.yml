@@ -17,4 +17,4 @@ jobs:
       - name: Run tests
         run: pytest
       - name: Run benchmark smoke test
-        run: beer-sentiment eval --model mock
+        run: beer-sentiment eval --model mock --benchmark benchmark/beer_sentiment_benchmark.jsonl

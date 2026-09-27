@@ -14,7 +14,7 @@ from beer_sentiment.eval.benchmark import load_benchmark
 def _real_benchmark_path() -> Path:
     configured = os.getenv("BEER_SENTIMENT_REAL_BENCHMARK")
     if not configured:
-        return PROJECT_ROOT / "data" / "beer_sentiment_benchmark_real.jsonl"
+        return PROJECT_ROOT / "benchmark" / "beer_sentiment_benchmark_real.jsonl"
     path = Path(configured).expanduser()
     return path if path.is_absolute() else PROJECT_ROOT / path
 

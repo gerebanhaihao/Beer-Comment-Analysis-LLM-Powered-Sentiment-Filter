@@ -15,6 +15,7 @@ htmlcov/
 # 真实舆情数据与成品文件不入库
 data/*
 !data/.gitkeep
+benchmark/beer_sentiment_benchmark_real.jsonl
 object/
 history/
 待筛选_*.csv

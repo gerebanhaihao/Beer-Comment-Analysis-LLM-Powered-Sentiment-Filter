@@ -1,0 +1,58 @@
+{
+  "model": "mock",
+  "benchmark": "C:\\Users\\yu\\beer-comment-analysis\\benchmark\\beer_sentiment_benchmark.jsonl",
+  "config_digest": "ef93f068f79c",
+  "timestamp": "20260824_120000",
+  "metrics": {
+    "total": 25,
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "negative_precision": 1.0,
+    "negative_recall": 1.0,
+    "negative_f1": 1.0,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0,
+    "per_class": {
+      "blue": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 5
+      },
+      "yellow": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 9
+      },
+      "none": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 11
+      }
+    },
+    "confusion": {
+      "blue": {
+        "blue": 5,
+        "yellow": 0,
+        "none": 0
+      },
+      "yellow": {
+        "blue": 0,
+        "yellow": 9,
+        "none": 0
+      },
+      "none": {
+        "blue": 0,
+        "yellow": 0,
+        "none": 11
+      }
+    },
+    "avg_latency_ms": 0.0,
+    "total_cost_usd": 0.0,
+    "mode": "simulated",
+    "error_count": 0,
+    "errors": []
+  }
+}

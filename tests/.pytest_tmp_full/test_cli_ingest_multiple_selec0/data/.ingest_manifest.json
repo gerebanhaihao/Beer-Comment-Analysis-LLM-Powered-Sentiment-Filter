@@ -1,0 +1,18 @@
+{
+  "files": {
+    "112144ea1eb8a2af99862b15a49f5be7d86b4f1f62ea397860a69b9f019d0dd0": {
+      "stored_name": "one.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": false,
+      "ingested_at": "2026-09-27T06:20:02.096327+00:00"
+    },
+    "e8ec1fb9a90eaab26bbdae7c8798ce330a43f434ab8bb6f60c5a52619e21fc2d": {
+      "stored_name": "two.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": false,
+      "ingested_at": "2026-09-27T06:20:02.121228+00:00"
+    }
+  }
+}

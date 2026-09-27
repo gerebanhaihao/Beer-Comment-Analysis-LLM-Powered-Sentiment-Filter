@@ -30,13 +30,12 @@ from beer_sentiment.llm.mock import MockJudge
 from beer_sentiment.llm.openai_compat import OpenAICompatJudge
 from beer_sentiment.llm.simulated import SimulatedJudge
 from beer_sentiment.models import Label
-from beer_sentiment.pipeline.run import run_directory
+from beer_sentiment.pipeline.run import ReviewCallback, run_directory
 from beer_sentiment.rag.hybrid import HybridRetriever
 from beer_sentiment.rag.judge import RagJudge
 from beer_sentiment.rag.knowledge import KnowledgeBase
 from beer_sentiment.rules.classify import Stage1Classifier
 from beer_sentiment.rules.normalize import clean_text
-
 
 REVIEW_HEADERS = ["颜色", "判断说明", "命中关键词", "合并文本", "输出", "来源文件", "原行号"]
 REVIEW_COLUMNS = set(REVIEW_HEADERS)
@@ -100,7 +99,11 @@ def build_judge(name: str, config: AppConfig, use_rag: bool | None = None) -> Ju
 
 def cmd_prepare(args, config: AppConfig) -> None:
     session = resolve_session(args.session)
-    today = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
+    today = (
+        dt.date.fromisoformat(args.date)
+        if args.date
+        else dt.datetime.now(dt.timezone.utc).astimezone().date()
+    )
     start, end = compute_window(session, today, config.time)
     input_dir = Path(args.input_dir)
     if not input_dir.exists():
@@ -180,15 +183,23 @@ def cmd_prepare(args, config: AppConfig) -> None:
 
 
 def cmd_ingest(args) -> None:
-    results = ingest_directory(
-        args.input_dir,
-        args.data_dir,
-        move=args.move,
-        encoding=args.encoding,
-    )
+    sources = args.input_files or ([args.input_dir] if args.input_dir else [])
+    if not sources:
+        print("请选择源数据目录或通过 --input-file 指定 CSV 文件")
+        sys.exit(2)
+    results = []
+    for source in sources:
+        results.extend(
+            ingest_directory(
+                source,
+                args.data_dir,
+                move=args.move,
+                encoding=args.encoding,
+            )
+        )
     if not results:
-        print(f"接入目录没有 CSV：{Path(args.input_dir).resolve()}")
-        return
+        print(f"源数据目录没有 CSV：{Path(sources[0]).resolve()}")
+        sys.exit(1)
     for result in results:
         target = f" -> {Path(result.destination).resolve()}" if result.destination else ""
         print(f"[{result.status}] {Path(result.source).name}{target}：{result.message}")
@@ -247,13 +258,21 @@ def cmd_build(args, config: AppConfig) -> None:
         print(f"已生成：{out_path.resolve()}（{len(item_rows)} 行）")
 
 
-def cmd_run(args, config: AppConfig) -> None:
+def cmd_run(args, config: AppConfig, review_callback: ReviewCallback | None = None) -> None:
     model_name = args.model or config.default_model
     judge = build_judge(
         model_name, config, use_rag=False if getattr(args, "no_rag", False) else None
     )
     session = resolve_session(args.session)
-    summaries, low_confidence = run_directory(
+    print(f"模型：{judge.name}")
+
+    def report(summary) -> None:
+        print(
+            f"已生成：{summary.output_path}（{summary.total_rows} 行，"
+            f"蓝 {summary.blue_rows} / 黄 {summary.yellow_rows}，送模型 {summary.candidates}）"
+        )
+
+    _, low_confidence = run_directory(
         args.input_dir,
         args.output_dir,
         session,
@@ -262,13 +281,10 @@ def cmd_run(args, config: AppConfig) -> None:
         config,
         args.name_contains,
         all_time=getattr(args, "all_time", False),
+        selected_files=args.input_files,
+        review_callback=review_callback,
+        summary_callback=report,
     )
-    print(f"模型：{judge.name}")
-    for summary in summaries:
-        print(
-            f"已生成：{summary.output_path}（{summary.total_rows} 行，"
-            f"蓝 {summary.blue_rows} / 黄 {summary.yellow_rows}，候选 {summary.candidates}）"
-        )
     if low_confidence:
         print("\n以下行置信度低于阈值，未自动标色，请人工复核：")
         for row in low_confidence:
@@ -339,7 +355,8 @@ def build_parser() -> argparse.ArgumentParser:
         "ingest",
         help="接入本地下载的 Quark CSV，不连接外部平台",
     )
-    ingest_parser.add_argument("--input-dir", default="incoming")
+    ingest_parser.add_argument("--input-dir")
+    ingest_parser.add_argument("--input-file", action="append", dest="input_files")
     ingest_parser.add_argument("--data-dir", default="data")
     ingest_parser.add_argument(
         "--move",
@@ -355,6 +372,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = sub.add_parser("run", help="端到端运行：粗筛 + 模型判定 + 着色 Excel")
     run_parser.add_argument("--input-dir", default="data")
+    run_parser.add_argument("--input-file", action="append", dest="input_files")
     run_parser.add_argument("--output-dir", default="output")
     run_parser.add_argument("--session", choices=["morning", "afternoon"])
     run_parser.add_argument("--date")
@@ -372,7 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     eval_parser = sub.add_parser("eval", help="在 Benchmark 上评测模型并生成报告")
-    eval_parser.add_argument("--benchmark", default="benchmark/beer_sentiment_benchmark.jsonl")
+    eval_parser.add_argument("--benchmark", default="benchmark/beer_sentiment_benchmark_real.jsonl")
     eval_parser.add_argument(
         "--models",
         "--model",
@@ -389,7 +407,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(
+    argv: list[str] | None = None,
+    review_callback: ReviewCallback | None = None,
+) -> None:
     args = build_parser().parse_args(argv)
     load_env_file()
     if args.command == "ingest":
@@ -402,7 +423,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "build":
         cmd_build(args, config)
     elif args.command == "run":
-        cmd_run(args, config)
+        cmd_run(args, config, review_callback=review_callback)
     elif args.command == "eval":
         cmd_eval(args, config)
     else:

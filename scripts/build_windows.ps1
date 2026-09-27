@@ -28,17 +28,30 @@ $work = Join-Path $staging "_work"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller 打包失败" }
 
 $newRelease = Join-Path $staging "BeerSentiment"
+$realBenchmark = Join-Path $project "benchmark\beer_sentiment_benchmark_real.jsonl"
+if (-not (Test-Path -LiteralPath $realBenchmark -PathType Leaf)) {
+    throw "缺少本地真实评测集：$realBenchmark"
+}
 Copy-Item (Join-Path $project "config") (Join-Path $newRelease "config") -Recurse -Force
 Copy-Item (Join-Path $project "prompts") (Join-Path $newRelease "prompts") -Recurse -Force
-Copy-Item (Join-Path $project "benchmark") (Join-Path $newRelease "benchmark") -Recurse -Force
-New-Item -ItemType Directory -Force -Path (Join-Path $newRelease "incoming"), (Join-Path $newRelease "data"), (Join-Path $newRelease "output"), (Join-Path $newRelease "artifacts") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $newRelease "benchmark"), (Join-Path $newRelease "data"), (Join-Path $newRelease "output"), (Join-Path $newRelease "artifacts") | Out-Null
+Copy-Item -LiteralPath (Join-Path $project "benchmark\beer_sentiment_benchmark.jsonl") -Destination (Join-Path $newRelease "benchmark") -Force
+Copy-Item -LiteralPath $realBenchmark -Destination (Join-Path $newRelease "benchmark") -Force
 
 $release = Join-Path $dist "BeerSentiment"
 if (Test-Path -LiteralPath $release) {
     $backup = Join-Path $dist ("BeerSentiment-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
-    Move-Item -LiteralPath $release -Destination $backup
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            Move-Item -LiteralPath $release -Destination $backup -ErrorAction Stop
+            break
+        } catch {
+            if ($attempt -eq 5) { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
     Write-Host "旧版本已保留：$backup"
-    foreach ($runtimeName in @("incoming", "data", "output", "artifacts")) {
+    foreach ($runtimeName in @("data", "output", "artifacts")) {
         $runtimeSource = Join-Path $backup $runtimeName
         if (Test-Path -LiteralPath $runtimeSource) {
             Copy-Item (Join-Path $runtimeSource "*") (Join-Path $newRelease $runtimeName) -Recurse -Force -ErrorAction SilentlyContinue

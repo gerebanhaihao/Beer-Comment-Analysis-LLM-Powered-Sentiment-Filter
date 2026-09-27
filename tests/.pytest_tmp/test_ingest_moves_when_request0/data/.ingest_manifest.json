@@ -1,0 +1,11 @@
+{
+  "files": {
+    "dbe642fae115a01afa5ce1384792f97720000d4adcdb74dbcb59c6052b43dde0": {
+      "stored_name": "quark.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": true,
+      "ingested_at": "2026-09-27T06:19:46.194288+00:00"
+    }
+  }
+}

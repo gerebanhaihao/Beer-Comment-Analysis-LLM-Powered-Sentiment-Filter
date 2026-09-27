@@ -1,0 +1,25 @@
+{
+  "files": {
+    "1f9bcf07d932450cfe1e231b84b88dff5197e7ea032c4a55756b94505958ef2b": {
+      "stored_name": "quark__2026-08-31 110000.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": true,
+      "ingested_at": "2026-09-27T06:19:46.209321+00:00"
+    },
+    "13303f5bff4bfa9d3b8b7012d73e354d16ba5929bcfc24e93cb1c20bdfbad23f": {
+      "stored_name": "quark__2026-08-31 111000.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": true,
+      "ingested_at": "2026-09-27T06:19:46.217727+00:00"
+    },
+    "1ebaee2067298be81e2a781f55e864776fb7a4d0d053a8c61fd75041d5495569": {
+      "stored_name": "quark__2026-08-31 112000.csv",
+      "rows": 1,
+      "encoding": "utf-8-sig",
+      "has_time_column": true,
+      "ingested_at": "2026-09-27T06:19:46.226080+00:00"
+    }
+  }
+}
